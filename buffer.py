@@ -5,7 +5,8 @@ from config import MODBUS_HOST, MODBUS_PORT, MODBUS_TYPE
 modbus_client = ModbusClient(host=MODBUS_HOST, port=MODBUS_PORT, type=MODBUS_TYPE)
 
 def allow_transfer_magazine():
-    return modbus_client.read_holding_registers(TRANSFER_ADDRESS, 1)[0] == 1
+    modbus_client.write_register(TRANSFER_ADDRESS, 1)
+    print("Buffer đang quay băng tải để nhận magazine")
 
 def confirm_transfer_magazine():
     return modbus_client.read_holding_registers(TRANSFER_ADDRESS, 1)[0] == 0
@@ -30,6 +31,7 @@ def buffer_action(action):
 def robot_wanna_receive_magazine():
     modbus_client.write_register(RECEIVE_ADDRESS, 0)
     print("Robot đang chờ để lấy magazine")
+    print("Buffer quay băng tải để trả magazine cho robot")
 
 def robot_confirm_receive_magazine():
     modbus_client.write_register(RECEIVE_ADDRESS, 1)
