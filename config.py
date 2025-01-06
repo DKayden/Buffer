@@ -3,12 +3,8 @@ TRANSFER_ADDRESS = 1
 GIVE_ADDRESS = 2
 RECEIVE_ADDRESS = 3
 
-
 APP_HOST = "0.0.0.0"
 APP_PORT = 5000
-
-PI_HOST = "10.10.100.102"
-PI_PORT = 5000
 
 ROBOT_HOST = "0.0.0.0"
 ROBOT_PORT = 5000
@@ -20,4 +16,15 @@ MODBUS_TYPE = 'tcp'
 BUFFER_HOST = "localhost"
 BUFFER_PORT = 5000
 
-BUFFER_LOCATION = "LM4"
+BUFFER_LOCATION = "LM40"
+BUFFER_ACTION = "flip"
+
+CALL_HOST = "0.0.0.0"
+CALL_PORT = 5000
+
+MAP_LINE = {
+    "line 25" : ["LM1", "LM2"],
+    "line 26" : ["LM3", "LM4"],
+    "line 27" : ["LM5", "LM6"],
+    "line 28" : ["LM7", "LM8"]
+}
