@@ -108,18 +108,28 @@ class ProccessHandler():
             print(f"Lỗi trong quá trình điều khiển cửa băng tải của robot: {str(e)}")
             raise requests.exceptions.RequestException("Thất bại khi điều khiển cửa băng tải của robot") from e
     
-    
+    async def get_data_from_socket_server(self):
+        """
+        Hàm này lấy thông tin dữ liệu từ socket server
+        """
+        try:
+            # Lấy dữ liệu từ socket server
+            data = socket_server.get_received_data()
+            if not data:
+                logging.warning("Không có dữ liệu từ socket server")
+                return
+            return data
+        except Exception as e:
+            print(f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}")
+            raise e from None
+                
 
     async def create_mission(self):
         """
         Hàm này lấy thông tin nhiệm vụ từ socket server và thêm vào danh sách nhiệm vụ.
         """
         try:
-            # Lấy dữ liệu từ socket server
-            data = socket_server.remove_first_item()
-            if not data:
-                logging.warning("Không có dữ liệu mới từ socket server")
-                return
+            data = self.get_data_from_socket_server()
             # Chuyển đổi dữ liệu string thành dict
             try:
                 mission_data = eval(data)
@@ -153,7 +163,24 @@ class ProccessHandler():
                 
         except Exception as e:
             logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
-            raise   
+            raise
+    
+    async def send_message_to_machine(self, location):
+        """
+        Hàm này gửi thông tin muốn nhận magazine tới máy
+        """
+        try:
+            # Tìm máy để nhận magazine
+            target_client = next((client for client, info in socket_server.client_info.items()
+                                  if info['location'] == location), None)
+            if target_client:
+                socket_server.broadcast_message("request_magazine", target_client)
+                print(f"Đã gửi thông tin muốn nhận magazine tới máy {location}")
+            else:
+                raise ValueError(f"Không tìm thấy máy để nhận magazine tại vị trí {location}")
+        except Exception as e:
+            logging.error(f"Lỗi trong quá trình gửi thông tin muốn nhận magazine: {str(e)}")
+            raise
 
     async def handle_magazine_process(self):
         while self.mission:
@@ -179,13 +206,7 @@ class ProccessHandler():
                 print("Robot quay băng tải để nhận magazine từ máy")
 
                 # Gửi thông tin muốn nhận magazine
-                target_client = next((client for client, info in socket_server.client_info.items()
-                                      if info['location'] == pick_up), None)
-                if target_client:
-                    socket_server.broadcast_message("request_magazine", target_client)
-                    print(f"Đã gửi yêu cầu nhận magazinr tới máy tại {pick_up}")
-                else:
-                    print(f"Không tìm thấy máy tại vị trí {pick_up}")
+                self.send_message_to_machine(pick_up)
 
                 # Kiểm tra xem robot đã nhận magazine từ máy
                 while self.check_conveyor_robot(dir_pick_up):
@@ -267,13 +288,7 @@ class ProccessHandler():
                 self.control_robot_stopper("open")
 
                 # Gửi thông tin trả magazine cho máy
-                destination_client = next((client for client, info in socket_server.client_info.items()
-                                      if info['location'] == destination), None)
-                if destination_client:
-                    socket_server.broadcast_message("request_magazine", destination_client)
-                    print(f"Đã gửi yêu cầu nhận magazinr tới máy tại {destination}")
-                else:
-                    print(f"Không tìm thấy máy tại vị trí {destination}")
+                self.send_message_to_machine(destination)
 
                 # Robot quay băng tải để trả hàng cho máy
                 await self.control_robot_conveyor(dir_destination)
