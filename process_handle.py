@@ -267,6 +267,13 @@ class ProccessHandler():
                 self.control_robot_stopper("open")
 
                 # Gửi thông tin trả magazine cho máy
+                destination_client = next((client for client, info in socket_server.client_info.items()
+                                      if info['location'] == destination), None)
+                if destination_client:
+                    socket_server.broadcast_message("request_magazine", destination_client)
+                    print(f"Đã gửi yêu cầu nhận magazinr tới máy tại {destination}")
+                else:
+                    print(f"Không tìm thấy máy tại vị trí {destination}")
 
                 # Robot quay băng tải để trả hàng cho máy
                 await self.control_robot_conveyor(dir_destination)
