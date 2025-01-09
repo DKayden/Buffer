@@ -139,13 +139,14 @@ class ProccessHandler():
             # Kiểm tra và xử lý dữ liệu
             line = mission_data.get('line')
             machine_type = mission_data.get('machine_type')
+            floor = mission_data.get('floor')
                 
-            if not line or not machine_type:
-                raise ValueError("Thiếu thông tin line hoặc machine_type trong dữ liệu nhận được")
+            if not line or not machine_type or not floor:
+                raise ValueError("Thiếu thông tin line hoặc machine_type hoặc floor trong dữ liệu nhận được")
                 
             logging.info(f"Đã nhận nhiệm vụ: line={line}, machine_type={machine_type}")
             
-                # Xử lý thông tin nhiệm vụ
+            # Xử lý thông tin nhiệm vụ
             if line in MAP_LINE:
                 station = MAP_LINE[line]
                 pick_up, destination = (station[0], station[1]) if machine_type == "loader" else (station[1], station[0])
@@ -155,7 +156,8 @@ class ProccessHandler():
                 # Thêm nhiệm vụ mới
                 self.mission.append({
                     "pick_up": pick_up,
-                    "destination": destination
+                    "destination": destination,
+                    "floor": floor
                 })
                 logging.info(f"Đã thêm nhiệm vụ mới: {self.mission[-1]}")
             else:

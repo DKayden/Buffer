@@ -79,6 +79,14 @@ class SocketServer:
                 return self.received_data.pop(0)
             return None
         
+    def stop(self):
+        """Dừng server và đóng các socket"""
+        print("Đang dừng server")
+        for client in self.clients:
+            client.close()
+        self.server_socket.close()
+        print("Server đã dừng")
+        
     def broadcast_message(self, message: str, target_socket: socket.socket = None):
         """
         Gửi tin nhắn đến một client cụ thể hoặc tất cả các client
