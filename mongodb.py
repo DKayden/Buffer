@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 class BufferDatabase:
@@ -12,7 +12,7 @@ class BufferDatabase:
         """
 
         self.client = MongoClient(connection_string)
-        self.database = self.client["robot_management"]
+        self.database = self.client["buffer"]
         self.tasks = self.database['robot_tasks']
 
         # Tạo index cho các trường thường được tìm kiếm.
@@ -49,7 +49,7 @@ class BufferDatabase:
         Returns:
             str: ID của nhiệm vụ
         """
-        timestamp = datetime.now(UTC)
+        timestamp = datetime.now(timezone.utc)
         task_id = self._generate_task_id(pickup_line, machine_type, timestamp)
 
         task = {
@@ -78,7 +78,7 @@ class BufferDatabase:
             {
                 "$set" : {
                     "is_processed": is_processed,
-                    "updated_at": datetime.now(UTC)
+                    "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
