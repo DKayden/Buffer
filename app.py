@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from modbus_client import ModbusClient
-from config import ACTION_ADDRESS, RECEIVE_ADDRESS, MODBUS_HOST, MODBUS_PORT, TRANSFER_ADDRESS, MODBUS_TYPE
+from buffer import modbus_client
+from config import ACTION_ADDRESS, RECEIVE_ADDRESS, TRANSFER_ADDRESS
 
-client_module = ModbusClient(MODBUS_HOST, MODBUS_PORT, MODBUS_TYPE)
 
 app = FastAPI(
     title="Buffer API",
@@ -23,25 +22,25 @@ app.add_middleware(
 @app.get("/buffer")
 async def buffer(type: str):
     if type == "flip":
-        client_module.write_register(ACTION_ADDRESS, 2)
+        modbus_client.write_register(ACTION_ADDRESS, 2)
         return {"message": "Buffer đã nhận lệnh lật!"}
     elif type == "circular":
-        client_module.write_register(ACTION_ADDRESS, 1)
+        modbus_client.write_register(ACTION_ADDRESS, 1)
         return {"message": "Buffer đã nhận lệnh xoay."}
     else:
         return {"error": "Loại hành động không hợp lệ."}
     
 @app.get("/getmagazine")
 async def getmagazine():
-    client_module.write_register(TRANSFER_ADDRESS, 1)
+    modbus_client.write_register(TRANSFER_ADDRESS, 1)
     return {"message": "Băng tải Buffer quay để nhận magazine"}
 
 @app.get("/receivemagazine")
 async def receivemagazine(type: str):
     if type == "confirm":
-        client_module.write_register(RECEIVE_ADDRESS, 0)
+        modbus_client.write_register(RECEIVE_ADDRESS, 0)
         return {"message": "AMR xác nhận đã tới lấy."}
     elif type == "done":
-        client_module.write_register(RECEIVE_ADDRESS, 1)
+        modbus_client.write_register(RECEIVE_ADDRESS, 1)
         return {"message": "AMR xác nhận đã hoàn thành lấy."}
     

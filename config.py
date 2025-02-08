@@ -28,3 +28,5 @@ MAP_LINE = {
     "line 27" : ["LM5", "LM6"],
     "line 28" : ["LM7", "LM8"]
 }
+
+HEIGHT_LINE_25 = 600

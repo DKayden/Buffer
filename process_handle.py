@@ -3,16 +3,14 @@ import asyncio
 from buffer import (allow_transfer_magazine, confirm_transfer_magazine
                     , confirm_receive_magazine, buffer_action, robot_wanna_receive_magazine
                     , robot_confirm_receive_magazine)
-from modbus_client import ModbusClient
 from config import (ROBOT_HOST, ROBOT_PORT, MODBUS_HOST, MODBUS_PORT, MODBUS_TYPE, BUFFER_LOCATION,
-                    MAP_LINE, BUFFER_ACTION)
+                    MAP_LINE, BUFFER_ACTION, HEIGHT_LINE_25)
 from mongodb import BufferDatabase
 from socket_server import SocketServer
 import logging
 
-modbus_client = ModbusClient(host=MODBUS_HOST, port=MODBUS_PORT, type=MODBUS_TYPE)
 
-buffer_db = BufferDatabase()
+# buffer_db = BufferDatabase()
 
 CW = []
 
@@ -28,7 +26,7 @@ class ProccessHandler():
     async def control_robot_to_location(self, location):
         try:
             response = requests.post(f"{self.robot_url}/navigation", json={
-                "data": location,
+                "id": location,
             })
             if response.status_code != 200:
                 raise requests.exceptions.RequestException(f"Lỗi đường truyền khi gửi thông tin đến robot. Trạng thái: {response.status_code}")
@@ -39,16 +37,13 @@ class ProccessHandler():
             raise requests.exceptions.RequestException("Thất bại khi điều khiển di chuyển của robot") from e
         
 
-    async def check_location_robot(self, location):
+    async def check_location_robot(self, location:str):
     # Robot xác nhận đã tới điểm
-        while True:
-            status = requests.get(f"{self.robot_url}/checklocation", json={
-                "data": location,
-            })
-            if status:
-                break
-            await asyncio.sleep(3)
-        print(f"Robot đã tới {location}")
+        flag = requests.get(f"{self.robot_url}/checklocation", json={
+            "location": location,
+        })
+        print(f"Cờ kiểm tra vị trí robot: {flag}")
+        await asyncio.sleep(3)
 
     async def control_robot_conveyor(self, direction):
         """
@@ -61,7 +56,7 @@ class ProccessHandler():
             if direction not in ["stop", "cw", "ccw"]:
                 raise ValueError("Hướng băng tải phải là 'stop' hoặc 'cw' hoặc 'ccw'.")
             response = requests.post(f"{self.robot_url}/conveyor", json={
-                "data": direction,
+                "type": direction,
             })
             if response.status_code != 200:
                 raise requests.exceptions.RequestException(f"Lỗi đường truyền khi điều khiển băng tải của robot. Trạng thái: {response.status_code}")
@@ -99,7 +94,7 @@ class ProccessHandler():
             if action not in ["open", "close"]:
                 raise ValueError("Hành động đóng cửa phải là 'open' hoặc 'close'.")
             response = requests.post(f"{self.robot_url}/stopper", json={
-                "data": action,
+                "action": action,
             })
             if response.status_code!= 200:
                 raise requests.exceptions.RequestException(f"Lỗi đường truyền khi điều khiển cửa băng tải của robot. Mã trạng thái: {response.status_code}")
@@ -107,6 +102,24 @@ class ProccessHandler():
         except requests.exceptions.RequestException as e:
             print(f"Lỗi trong quá trình điều khiển cửa băng tải của robot: {str(e)}")
             raise requests.exceptions.RequestException("Thất bại khi điều khiển cửa băng tải của robot") from e
+        
+    async def control_folk_conveyor(self,height):
+        """
+        Hàm này điều khiển nâng băng tải của robot.
+
+        Args:
+            floor(int): Tầng cần nâng lên
+        """
+        try:
+            response = requests.post(f"{self.robot_url}/lift", json={
+                "height": height,
+            })
+            if response.status_code!= 200:
+                raise requests.exceptions.RequestException(f"Lỗi đường truyền khi điều khiển nâng băng tải của robot. Mã trạng thái: {response.status_code}")
+            print("Nâng băng tải của robot đã được điều khiển thành công")
+        except requests.exceptions.RequestException as e:
+            print(f"Lỗi trong quá trình điều khiển nâng băng tải của robot: {str(e)}")
+            raise requests.exceptions.RequestException("Thất bại khi điều khiển nâng băng tải của robot") from e
     
     async def get_data_from_socket_server(self):
         """
@@ -184,12 +197,52 @@ class ProccessHandler():
             logging.error(f"Lỗi trong quá trình gửi thông tin muốn nhận magazine: {str(e)}")
             raise
 
+    async def process_handle_tranfer_goods(self, floor, direction, location, type):
+        """
+        Hàm này xử lý quá trình chuyển hàng giữa robot và máy
+        """
+        try:
+            # Kiểm tra nếu là tầng 2 thì điều khiển năng băng tải
+            if floor == 2:
+                await self.control_folk_conveyor(HEIGHT_LINE_25)
+                print("Robot nâng băng tải tầng 2")
+
+            # Robot mở stopper
+            self.control_robot_stopper("open")
+
+            # Gửi thông tin đến máy
+            await self.send_message_to_machine(location)
+            
+            # Robot quay băng tải
+            await self.control_robot_conveyor(direction)
+            print("Robot quay băng tải để chuyển hàng với máy")
+
+            if type == "pick_up":
+                # Kiểm tra xem robot đã nhận magazine từ máy
+                while self.check_conveyor_robot(direction):
+                    print("Robot chưa nhận magazine từ máy!!!")
+                    await asyncio.sleep(3)
+                print("Robot đã nhận magazine từ máy!!!")
+            # elif type == "drop_off":
+                # Kiểm tra xem máy đã nhận magazine
+
+
+            # Robot đóng stopper
+            self.control_robot_stopper("close")
+
+            # Robot dừng băng tải
+            await self.control_robot_conveyor("stop")
+        except Exception as e:
+            logging.error(f"Xảy ra lỗi trong quá trình chuyển hàng giữa robot và máy: {str(e)}")
+            raise
+
     async def handle_magazine_process(self):
         while self.mission:
             try:
                 # Trích xuất thông tin từ danh sách nhiệm vụ
                 pick_up = self.mission[0]["pick_up"]
                 destination = self.mission[0]["destination"]
+                floor = self.mission[0]["floor"]
                 print(f"Pickup: {pick_up}, dropoff: {destination}")
                 dir_pick_up = self.direction_conveyor(pick_up)
                 dir_destination = self.direction_conveyor(destination)
@@ -200,27 +253,8 @@ class ProccessHandler():
                 # Kiểm tra xem robot đã tới vị trí lấy magazine
                 await self.check_location_robot(pick_up)
 
-                # Robot mở stopper
-                self.control_robot_stopper("open")
-
-                # Robot quay băng tải để lấy magazine từ máy
-                await self.control_robot_conveyor(dir_pick_up)
-                print("Robot quay băng tải để nhận magazine từ máy")
-
-                # Gửi thông tin muốn nhận magazine
-                self.send_message_to_machine(pick_up)
-
-                # Kiểm tra xem robot đã nhận magazine từ máy
-                while self.check_conveyor_robot(dir_pick_up):
-                    print("Robot chưa nhận magazine từ máy!!!")
-                    await asyncio.sleep(3)
-                print("Robot đã nhận magazine từ máy!!!")
-
-                # Robot đóng stopper
-                self.control_robot_stopper("close")
-
-                # Robot dừng băng tải
-                await self.control_robot_conveyor("stop")
+                # Xử lý chuyển hàng giữa robot và máy
+                await self.process_handle_tranfer_goods(floor, dir_pick_up, pick_up, "pick_up")
 
                 # Gửi nhiệm vụ theo yêu cầu cho Buffer
                 buffer_action(action=BUFFER_ACTION)
@@ -286,23 +320,8 @@ class ProccessHandler():
                 # Kiểm tra xem robot đã tới vị trí trả magazine
                 await self.check_location_robot(destination)
 
-                # Robot mở stopper
-                self.control_robot_stopper("open")
-
-                # Gửi thông tin trả magazine cho máy
-                self.send_message_to_machine(destination)
-
-                # Robot quay băng tải để trả hàng cho máy
-                await self.control_robot_conveyor(dir_destination)
-                print("Robot quay băng tải để truyền magazine cho máy")
-
-                # Máy xác nhận đã nhận magazine
-
-                # Robot dừng băng tải
-                await self.control_robot_conveyor("stop")
-
-                # Robot đóng stopper
-                self.control_robot_stopper("close")
+                # Xử lý chuyển hàng giữa robot và máy
+                await self.process_handle_tranfer_goods(floor, dir_destination, destination, "drop_off")
 
                 # Xóa nhiệm vụ đã hoàn thành
                 self.mission.pop(0)

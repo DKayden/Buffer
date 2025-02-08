@@ -1,6 +1,7 @@
 import socket
 import threading
 from typing import List, Any
+import json
 
 class SocketServer:
     def __init__(self, host: str = 'localhost', port: int = 5000):
@@ -18,17 +19,16 @@ class SocketServer:
         self.server_socket.listen(5)
         print(f"Server đang lắng nghe tại {self.host}:{self.port}")
         
-        while True:
-            client_socket, address = self.server_socket.accept()
-            self.clients.append(client_socket)
-            print(f"Kết nối mới từ {address}")
-            
-            # Tạo thread mới để xử lý client
-            client_thread = threading.Thread(
-                target=self.handle_client,
-                args=(client_socket, address)
-            )
-            client_thread.start()
+        client_socket, address = self.server_socket.accept()
+        self.clients.append(client_socket)
+        print(f"Kết nối mới từ {address}")
+        
+        # Tạo thread mới để xử lý client
+        client_thread = threading.Thread(
+            target=self.handle_client,
+            args=(client_socket, address)
+        )
+        client_thread.start()
     
     def handle_client(self, client_socket: socket.socket, address: tuple):
         """Xử lý dữ liệu từ một client cụ thể"""
@@ -42,7 +42,7 @@ class SocketServer:
                     break
                     
                 # Xử lý dữ liệu nhận được (ví dụ: decode từ bytes)
-                processed_data = data.decode('utf-8')
+                processed_data = json.loads(data.decode('utf-8'))
                 
                 # Lưu dữ liệu vào danh sách với thread safety
                 with self._lock:
@@ -50,8 +50,11 @@ class SocketServer:
                     print(f"Đã nhận dữ liệu từ {address}: {processed_data}")
                 
                 # Gửi phản hồi cho client
-                response = "Success"
-                client_socket.send(response.encode('utf-8'))
+                response = {
+                    'line' : processed_data['line'],
+                    'floor' : 0
+                }
+                client_socket.send(json.dumps(response).encode('utf-8'))
                 
         except Exception as e:
             print(f"Lỗi khi xử lý client {address}: {e}")
