@@ -8,6 +8,8 @@ from config import (ROBOT_HOST, ROBOT_PORT, MODBUS_HOST, MODBUS_PORT, MODBUS_TYP
 from mongodb import BufferDatabase
 from socket_server import SocketServer
 import logging
+from collections import deque
+import json
 
 
 # buffer_db = BufferDatabase()
@@ -21,7 +23,7 @@ socket_server = SocketServer()
 class ProccessHandler():
     def __init__(self):
         self.robot_url = f"http://{ROBOT_HOST}:{ROBOT_PORT}"
-        self.mission = []
+        self.mission = deque()
 
     async def control_robot_to_location(self, location):
         try:
@@ -106,9 +108,6 @@ class ProccessHandler():
     async def control_folk_conveyor(self,height):
         """
         Hàm này điều khiển nâng băng tải của robot.
-
-        Args:
-            floor(int): Tầng cần nâng lên
         """
         try:
             response = requests.post(f"{self.robot_url}/lift", json={
@@ -135,52 +134,73 @@ class ProccessHandler():
         except Exception as e:
             print(f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}")
             raise e from None
-                
+
+    def is_duplicate_mission(self, new_mission):
+        """
+        Hàm này kiểm tra xem nhiệm vụ mới có trùng với nhiệm vụ đã đăng ký hay không.
+        """
+        for mission in self.mission:
+            if (mission["pick_up"] == new_mission["pick_up"] and
+                mission["destination"] == new_mission["destination"] and
+                mission["floor"] == new_mission["floor"] and 
+                mission["line"] == new_mission["line"] and
+                mission["machine_type"] == new_mission["machine_type"]):
+                return True
+        return False             
+
+    def _validate_mission_data(self, mission_data):
+        """Kiểm tra tính hợp lệ của dữ liệu nhiệm vụ"""
+        line = mission_data.get('line')
+        machine_type = mission_data.get('machine_type')
+        floor = mission_data.get('floor')
+            
+        if not line or not machine_type or not floor:
+            raise ValueError("Thiếu thông tin line hoặc machine_type hoặc floor trong dữ liệu nhận được")
+        
+        return line, machine_type, floor
+
+    def _create_mission_from_data(self, line, machine_type, floor):
+        """Tạo nhiệm vụ từ dữ liệu đã xác thực"""
+        if line not in MAP_LINE:
+            raise ValueError(f"Không tìm thấy thông tin cho line: {line}")
+            
+        station = MAP_LINE[line]
+        pick_up, destination = (station[0], station[1]) if machine_type == "loader" else (station[1], station[0])
+        logging.info(f"Tạo nhiệm vụ từ {pick_up} đến {destination}")
+        
+        # Xử lý tạo nhiệm vụ nếu có thông tin tầng
+        for i in floor:
+            if i != 0:
+                new_mission = {
+                    "pick_up": pick_up,
+                    "destination": destination,
+                    "floor": i,
+                    "line": line,
+                    "machine_type" : machine_type
+                }
+                if not self.is_duplicate_mission(new_mission):
+                    self.mission.append(new_mission)
+                    logging.info(f"Đã thêm nhiệm vụ mới: {new_mission}")
+                else:
+                    raise ValueError("Nhiệm vụ này đã tồn tại trong danh sách chờ")
 
     async def create_mission(self):
-        """
-        Hàm này lấy thông tin nhiệm vụ từ socket server và thêm vào danh sách nhiệm vụ.
-        """
+        """Hàm này lấy thông tin nhiệm vụ từ socket server và thêm vào danh sách nhiệm vụ."""
         try:
             data = self.get_data_from_socket_server()
-            # Chuyển đổi dữ liệu string thành dict
             try:
                 mission_data = eval(data)
             except (SyntaxError, ValueError, NameError) as e:
                 raise ValueError(f"Dữ liệu nhận được không đúng định dạng: {str(e)}")
             
-            # Kiểm tra và xử lý dữ liệu
-            line = mission_data.get('line')
-            machine_type = mission_data.get('machine_type')
-            floor = mission_data.get('floor')
-                
-            if not line or not machine_type or not floor:
-                raise ValueError("Thiếu thông tin line hoặc machine_type hoặc floor trong dữ liệu nhận được")
-                
-            logging.info(f"Đã nhận nhiệm vụ: line={line}, machine_type={machine_type}")
-            
-            # Xử lý thông tin nhiệm vụ
-            if line in MAP_LINE:
-                station = MAP_LINE[line]
-                pick_up, destination = (station[0], station[1]) if machine_type == "loader" else (station[1], station[0])
-                    
-                logging.info(f"Tạo nhiệm vụ từ {pick_up} đến {destination}")
-                    
-                # Thêm nhiệm vụ mới
-                self.mission.append({
-                    "pick_up": pick_up,
-                    "destination": destination,
-                    "floor": floor
-                })
-                logging.info(f"Đã thêm nhiệm vụ mới: {self.mission[-1]}")
-            else:
-                raise ValueError(f"Không tìm thấy thông tin cho line: {line}")
+            line, machine_type, floor = self._validate_mission_data(mission_data)
+            self._create_mission_from_data(line, machine_type, floor)
                 
         except Exception as e:
             logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
             raise
     
-    async def send_message_to_machine(self, location):
+    async def request_get_magazine(self, location, line, floor, machine_type):
         """
         Hàm này gửi thông tin muốn nhận magazine tới máy
         """
@@ -189,7 +209,13 @@ class ProccessHandler():
             target_client = next((client for client, info in socket_server.client_info.items()
                                   if info['location'] == location), None)
             if target_client:
-                socket_server.broadcast_message("request_magazine", target_client)
+                messsage = {
+                    "line" : line,
+                    "floor" : floor,
+                    "machine_type" : machine_type
+                }
+                json_message = json.dumps(messsage)
+                socket_server.broadcast_message(json_message, target_client)
                 print(f"Đã gửi thông tin muốn nhận magazine tới máy {location}")
             else:
                 raise ValueError(f"Không tìm thấy máy để nhận magazine tại vị trí {location}")
@@ -197,7 +223,7 @@ class ProccessHandler():
             logging.error(f"Lỗi trong quá trình gửi thông tin muốn nhận magazine: {str(e)}")
             raise
 
-    async def process_handle_tranfer_goods(self, floor, direction, location, type):
+    async def process_handle_tranfer_goods(self, floor, direction, location, type, line, machine_type):
         """
         Hàm này xử lý quá trình chuyển hàng giữa robot và máy
         """
@@ -211,7 +237,7 @@ class ProccessHandler():
             self.control_robot_stopper("open")
 
             # Gửi thông tin đến máy
-            await self.send_message_to_machine(location)
+            await self.request_get_magazine(location, line, floor, machine_type)
             
             # Robot quay băng tải
             await self.control_robot_conveyor(direction)
@@ -223,6 +249,7 @@ class ProccessHandler():
                     print("Robot chưa nhận magazine từ máy!!!")
                     await asyncio.sleep(3)
                 print("Robot đã nhận magazine từ máy!!!")
+                await self.request_get_magazine(location, line, 0, machine_type)
             # elif type == "drop_off":
                 # Kiểm tra xem máy đã nhận magazine
 
@@ -243,6 +270,8 @@ class ProccessHandler():
                 pick_up = self.mission[0]["pick_up"]
                 destination = self.mission[0]["destination"]
                 floor = self.mission[0]["floor"]
+                line = self.mission[0]["line"]
+                machine_type = self.mission[0]["machine_type"]
                 print(f"Pickup: {pick_up}, dropoff: {destination}")
                 dir_pick_up = self.direction_conveyor(pick_up)
                 dir_destination = self.direction_conveyor(destination)
@@ -254,7 +283,7 @@ class ProccessHandler():
                 await self.check_location_robot(pick_up)
 
                 # Xử lý chuyển hàng giữa robot và máy
-                await self.process_handle_tranfer_goods(floor, dir_pick_up, pick_up, "pick_up")
+                await self.process_handle_tranfer_goods(floor, dir_pick_up, pick_up, "pick_up", line, machine_type)
 
                 # Gửi nhiệm vụ theo yêu cầu cho Buffer
                 buffer_action(action=BUFFER_ACTION)
@@ -321,10 +350,10 @@ class ProccessHandler():
                 await self.check_location_robot(destination)
 
                 # Xử lý chuyển hàng giữa robot và máy
-                await self.process_handle_tranfer_goods(floor, dir_destination, destination, "drop_off")
+                await self.process_handle_tranfer_goods(floor, dir_destination, destination, "drop_off", line, machine_type)
 
                 # Xóa nhiệm vụ đã hoàn thành
-                self.mission.pop(0)
+                self.mission.popleft()
                 print(f"Nhiệm vụ đã hoàn thành: {self.mission}")
 
                 return {"message": "Quá trình xử lý hoàn tất"}
