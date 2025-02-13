@@ -17,7 +17,9 @@ from config import (
     BUFFER_LOCATION,
     MAP_LINE,
     BUFFER_ACTION,
-    HEIGHT_LINE_25,
+    HEIGHT_FLOOR_1_LINE_25,
+    HEIGHT_FLOOR_2_LINE_25,
+    HEIGHT_BUFFER,
 )
 from mongodb import BufferDatabase
 from socket_server import SocketServer
@@ -294,8 +296,11 @@ class ProccessHandler:
         try:
             # Kiểm tra nếu là tầng 2 thì điều khiển năng băng tải
             if floor == 2:
-                self.control_folk_conveyor(HEIGHT_LINE_25)
+                self.control_folk_conveyor(HEIGHT_FLOOR_2_LINE_25)
                 print("Robot nâng băng tải tầng 2")
+            elif floor == 1:
+                self.control_folk_conveyor(HEIGHT_FLOOR_1_LINE_25)
+                print("Robot nâng băng tải tầng 1")
 
             # Robot mở stopper
             self.control_robot_stopper(direction, "open")
@@ -367,6 +372,8 @@ class ProccessHandler:
                     print("Robot chưa tới vị trí buffer!!!")
                     asyncio.sleep(3)
                 print("Robot đã tới vị trí buffer!!!")
+
+                self.control_folk_conveyor(HEIGHT_BUFFER)
 
                 # Buffer quay băng tải để nhận magazine
                 allow_transfer_magazine()

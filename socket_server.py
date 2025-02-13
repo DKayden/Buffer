@@ -2,10 +2,12 @@ import socket
 import threading
 from typing import List, Any
 import json
+from config import SOCKET_HOST, SOCKET_PORT
 
 
 class SocketServer:
-    def __init__(self, host: str = "192.168.1.101", port: int = 3000):
+
+    def __init__(self, host: str = SOCKET_HOST, port: int = SOCKET_PORT):
         self.host = host
         self.port = port
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
