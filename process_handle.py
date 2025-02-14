@@ -27,9 +27,6 @@ import logging
 from collections import deque
 import json
 
-
-# buffer_db = BufferDatabase()
-
 CW = []
 
 # Khởi tạo socket server
@@ -184,6 +181,19 @@ class ProccessHandler:
         except Exception as e:
             print(f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}")
             raise e from None
+        
+    def get_mission_data_from_socket_server(self):
+        """Hàm này để lấu thông tin nhiệm vụ từ socket server"""
+        try:
+            # Lấy thông tin nhiệm vụ từ socket server
+            mission_data = socket_server.get_mission_data()
+            if not mission_data:
+                logging.warning("Không có dữ liệu nhiệm vụ từ socket server")
+                return
+            return mission_data
+        except Exception as e:
+            print(f"Lỗi trong quá trình lấy thông tin nhiệm vụ từ socket server: {str(e)}")
+            raise e from None
 
     def is_duplicate_mission(self, new_mission):
         """
@@ -244,19 +254,19 @@ class ProccessHandler:
 
     def create_mission(self):
         """Hàm này lấy thông tin nhiệm vụ từ socket server và thêm vào danh sách nhiệm vụ."""
-        try:
-            data = self.get_data_from_socket_server()
+        while True:
             try:
-                mission_data = eval(data)
-            except (SyntaxError, ValueError, NameError) as e:
-                raise ValueError(f"Dữ liệu nhận được không đúng định dạng: {str(e)}")
+                try:
+                    mission_data = self.get_mission_data_from_socket_server()
+                except (SyntaxError, ValueError, NameError) as e:
+                    raise ValueError(f"Dữ liệu nhận được không đúng định dạng: {str(e)}")
 
-            line, machine_type, floor = self._validate_mission_data(mission_data)
-            self._create_mission_from_data(line, machine_type, floor)
+                line, machine_type, floor = self._validate_mission_data(mission_data)
+                self._create_mission_from_data(line, machine_type, floor)
 
-        except Exception as e:
-            logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
-            raise
+            except Exception as e:
+                logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
+                raise
 
     def request_get_magazine(self, location, line, floor, machine_type):
         """
@@ -322,10 +332,13 @@ class ProccessHandler:
             elif type == "drop_off":
                 # Kiểm tra xem máy đã nhận magazine
                 i = floor - 1
-                data_check = ""
-                while not data_check["floor"][i] == 0:
-                    print("Máy chưa nhận xong magazine!!!")
-                    data_check = self.get_data_from_socket_server()
+                data_check = self.get_data_from_socket_server()
+                for value in data_check:
+                    if value["line"] == line and value["machine_type"] == machine_type:
+                        while value["floor"][i] != 0:
+                            print("Máy chưa nhận xong magazine!!!")
+                        break
+
             # Robot đóng stopper
             self.control_robot_stopper(direction, "close")
 
