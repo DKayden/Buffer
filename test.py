@@ -4,6 +4,10 @@ from process_handle import socket_server
 import time
 import threading
 import json
+import os
+from config import SOCKET_PORT
+import signal
+import subprocess
 
 
 def monitor_data(server):
@@ -34,7 +38,27 @@ def monitor_data(server):
         time.sleep(3)  # Đợi 3 giây trước khi kiểm tra lại
 
 
+def check_and_kill_port(port):
+    try:
+        # Kiểm tra tiến trình đang sử dụng port
+        cmd = f"lsof -ti :{port}"
+        pid = subprocess.check_output(cmd, shell=True)
+
+        if pid:
+            pid = int(pid.decode().strip())
+            print(f"Tìm thấy tiến trình {pid} đang sử dụng cổng {port}")
+            # Gửi signal để kết thúc tiến trình
+            os.kill(pid, signal.SIGTERM)
+            print(f"Đã đóng tiến trình {pid}")
+    except subprocess.CalledProcessError:
+        # Không có tiến trình nào đang sử dụng port
+        pass
+    except Exception as e:
+        print(f"Lỗi khi kiểm tra/đóng port: {e}")
+
+
 if __name__ == "__main__":
+    check_and_kill_port(SOCKET_PORT)
     # Khởi tạo server
     server = socket_server
 
@@ -78,18 +102,6 @@ if __name__ == "__main__":
 #                 mission_data = value
 #                 print("line: ", mission_data.get("line"))
 
-#         # print("type", type(data))
-#         # if data:
-#         #     reception_data = json.loads(data[0])
-#         #     print("reception_data" + reception_data)
-#         # print("floor show:", (reception_data["floor"]))
-
-#         # for i in data:
-#         # print("i" + i[0])
-#         # if i["floor"][0] != 0:
-#         #     floor = i["floor"][0]
-#         # elif i["floor"][1] != 0:
-#         #     floor = i["floor"][1]
 
 #         # Xây dựng thông điệp với giá trị trường là chuỗi bình thường mà không có dấu ngoặc kép thừa
 #         # message = {
