@@ -166,6 +166,25 @@ class ProccessHandler:
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển nâng băng tải của robot"
             ) from e
+        
+    def check_robot_conveyor_height(self, height):
+        """
+        Hàm này kiểm tra độ cao của băng tải của robot.
+        """
+        try:
+            response = requests.get(f"{self.robot_url}/lift?height={height}")
+            if response.status_code != 200:
+                raise requests.exceptions.RequestException(
+                    f"Lỗi đường truyền khi kiểm tra độ cao băng tải của robot. Mã trạng thái: {response.status_code}"
+                )
+            return response
+        except requests.exceptions.RequestException as e:
+            print(
+                f"Lỗi trong quá trình kiểm tra độ cao băng tải của robot: {str(e)}"
+            )
+            raise requests.exceptions.RequestException(
+                "Thất bại khi kiểm tra độ cao băng tải của robot"
+            ) from e
 
     def get_data_from_socket_server(self):
         """
@@ -230,9 +249,9 @@ class ProccessHandler:
 
         station = MAP_LINE[line]
         pick_up, destination = (
-            (station[0], station[1])
+            (station[1], station[0])
             if machine_type == "loader"
-            else (station[1], station[0])
+            else (station[0], station[1])
         )
         logging.info(f"Tạo nhiệm vụ từ {pick_up} đến {destination}")
 
@@ -306,11 +325,14 @@ class ProccessHandler:
         try:
             # Kiểm tra nếu là tầng 2 thì điều khiển năng băng tải
             if floor == 2:
-                self.control_folk_conveyor(HEIGHT_FLOOR_2_LINE_25)
-                print("Robot nâng băng tải tầng 2")
+                height = HEIGHT_FLOOR_2_LINE_25
             elif floor == 1:
-                self.control_folk_conveyor(HEIGHT_FLOOR_1_LINE_25)
-                print("Robot nâng băng tải tầng 1")
+                height = HEIGHT_FLOOR_1_LINE_25
+            self.control_folk_conveyor(height)
+
+            # Kiểm tra dộ cao của băng tải
+            while not self.check_robot_conveyor_height(height):
+                print("Robot đang thao tác với băng tải")
 
             # Robot mở stopper
             self.control_robot_stopper(direction, "open")

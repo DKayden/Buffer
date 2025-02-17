@@ -14,8 +14,9 @@ class SocketServer:
         self.client_info = {}
         self.clients: List[socket.socket] = []
         self.received_data: List[Any] = []  # Danh sách lưu trữ dữ liệu
+        self.receive_dict_value = {}
+        self.mission_data = set()
         self._lock = threading.Lock()  # Lock để đồng bộ hóa truy cập vào received_data
-        self.mission_data: List[Any] = [] # Thêm biến để lưu mission data
 
     def start(self):
         """Khởi động server và lắng nghe kết nối"""
@@ -23,50 +24,69 @@ class SocketServer:
         self.server_socket.listen(5)
         print(f"Server đang lắng nghe tại {self.host}:{self.port}")
 
-        client_socket, address = self.server_socket.accept()
-        self.clients.append(client_socket)
-        print(f"Kết nối mới từ {address}")
+        while True:
+            client_socket, address = self.server_socket.accept()
+            self.clients.append(client_socket)
+            print(f"Kết nối mới từ {address}")
 
-        # Tạo thread mới để xử lý client
-        client_thread = threading.Thread(
-            target=self.handle_client, args=(client_socket, address)
-        )
-        client_thread.start()
+            # Tạo thread mới để xử lý client
+            client_thread = threading.Thread(
+                target=self.handle_client, args=(client_socket, address)
+            )
+            client_thread.start()
 
     def handle_client(self, client_socket: socket.socket, address: tuple):
         """Xử lý dữ liệu từ một client cụ thể"""
         try:
             # Nhận thông tin location từ client khi kết nối
             location_data = client_socket.recv(1024).decode("utf-8")
-            self.client_info[client_socket] = {
-                "location": location_data,
-                "address" : address[0],
-                "last_data" : None
-                }
+            self.client_info[client_socket] = {"location": location_data}
             while True:
                 data = client_socket.recv(1024)
                 if not data:
                     break
 
-                # Xử lý dữ liệu nhận được
+                # Xử lý dữ liệu nhận được (ví dụ: decode từ bytes)
                 processed_data = json.loads(data.decode("utf-8"))
 
-                if processed_data["floor"][0] != 0 or processed_data["floor"][1] != 0:
-                    with self._lock:
-                        # Cập nhật dữ liệu mới cho client hiện tại
-                        self.client_info[client_socket]["last_data"] = processed_data
-                        self.received_data.append(processed_data)
-                        print(f"Đã nhận dữ liệu từ {address}: {processed_data}")
-                        # Kiểm tra và cập nhật mission_data
-                        self.check_and_update_mission()
+                # Lưu dữ liệu vào danh sách với thread safety
+                # if processed_data["floor"][0] != 0 or processed_data["floor"][1] != 0:
 
+                with self._lock:
+                    # self.receive_set_value.add(processed_data)
+                    # self.received_data.append(processed_data)
+                    # self.receive_dict_value
+                    dict_value = {
+                        address[0] : processed_data
+                    }
+                    self.receive_dict_value.update(dict_value)
+                    print(f"Đã nhận dữ liệu {self.receive_dict_value}")
+
+                    client1_data = None
+                    client2_data = None
+                    for pair in MAP_ADDRESS:
+                        for key, value in self.receive_dict_value.items():
+                            if key == pair[0]:
+                                client1_data = value
+                            elif key == pair[1]:
+                                client2_data = value
+                    print(f"Client 1: {client1_data}")
+                    print(f"Client 2: {client2_data}")
+                    if client1_data is not None and client2_data is not None:
+                        for i in len(client1_data["floor"]):
+                            if client1_data["floor"][i] == client2_data["floor"][i]:
+                                self.mission_data.add({
+                                    "floor" : client1_data["floor"],
+                                    "line" : client1_data["line"]
+                                })
+                    print(f"Mission: {self.mission_data}")
                 # Gửi phản hồi cho client
                 # response = {"line": processed_data["line"], "floor": 0}
                 # client_socket.send(json.dumps(response).encode("utf-8"))
 
         except Exception as e:
-            print(f"Lỗi khi xử lý client {address}: {e}")
-            # pass
+            # print(f"Lỗi khi xử lý client {address}: {e}")
+            pass
         finally:
             if client_socket in self.client_info:
                 del self.client_info[client_socket]
@@ -89,72 +109,6 @@ class SocketServer:
         with self._lock:
             if self.received_data:
                 return self.received_data.pop(0)
-            return None
-        
-    def _get_client_data_for_pair(self, pair):
-        """Lấy dữ liệu của cặp client"""
-        client1_data = None
-        client2_data = None
-        
-        for client, info in self.client_info.items():
-            if info["address"] == pair[0]:
-                client1_data = info["last_data"]
-            elif info["address"] == pair[1]:
-                client2_data = info["last_data"]
-                
-        return client1_data, client2_data
-
-    def _is_valid_mission(self, client1_data, client2_data):
-        """Kiểm tra tính hợp lệ của mission"""
-        return (client1_data is not None and 
-                client2_data is not None and
-                client1_data["floor"] == client2_data["floor"])
-
-    def _create_new_mission(self, client_data):
-        """Tạo mission mới từ dữ liệu client"""
-        return {
-            "floor": client_data["floor"],
-            "line": client_data["line"],
-            "machine_type": client_data["machine_type"]
-        }
-
-    def _mission_exists(self, new_mission):
-        """Kiểm tra mission đã tồn tại chưa"""
-        return any(
-            mission["floor"] == new_mission["floor"] and
-            mission["line"] == new_mission["line"] and
-            mission["machine_type"] == new_mission["machine_type"]
-            for mission in self.mission_data
-        )
-
-    def check_and_update_mission(self):
-        """Kiểm tra và cập nhật mission_data dựa trên các cặp địa chỉ"""
-        with self._lock:
-            for pair in MAP_ADDRESS:
-                client1_data, client2_data = self._get_client_data_for_pair(pair)
-                
-                if self._is_valid_mission(client1_data, client2_data):
-                    new_mission = self._create_new_mission(client1_data)
-                    
-                    if not self._mission_exists(new_mission):
-                        self.mission_data.append(new_mission)
-                        print(f"Đã tạo mission: {new_mission}")
-
-    def get_mission_data(self) -> List[Any]:
-        """Lấy danh sách mission_data"""
-        with self._lock:
-            return self.mission_data.copy()
-    
-    def clear_mission_data(self):
-        """Xóa toàn bộ mission_data"""
-        with self._lock:
-            self.mission_data.clear()
-
-    def remove_first_mission(self):
-        """Xóa mission đầu tiên"""
-        with self._lock:
-            if self.mission_data:
-                return self.mission_data.pop(0)
             return None
 
     def stop(self):
@@ -194,3 +148,4 @@ class SocketServer:
                         # self.clients.remove(client)
                         continue  # Thêm continue để tiếp tục vòng lặp
                 print(f"Đã gửi tin nhắn đến tất cả client: {message}")
+
