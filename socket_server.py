@@ -91,14 +91,15 @@ class SocketServer:
                     print(f"Client 1: {client1_data}")
                     print(f"Client 2: {client2_data}")
                     if client1_data is not None and client2_data is not None:
-                        for i in len(client1_data["floor"]):
-                            if client1_data["floor"][i] == client2_data["floor"][i]:
-                                self.mission_data.add(
-                                    {
-                                        "floor": client1_data["floor"],
-                                        "line": client1_data["line"],
-                                    }
-                                )
+                        if "floor" in client1_data and "floor" in client2_data:
+                            for i in range(len(client1_data["floor"])):
+                                if client1_data["floor"][i] == client2_data["floor"][i]:
+                                    self.mission_data.add(
+                                        {
+                                            "floor": client1_data["floor"],
+                                            "line": client1_data["line"],
+                                        }
+                                    )
                     print(f"Mission: {self.mission_data}")
                 # Gửi phản hồi cho client
                 # response = {"line": processed_data["line"], "floor": 0}
