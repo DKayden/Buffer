@@ -19,13 +19,16 @@ from config import (
     BUFFER_ACTION,
     HEIGHT_FLOOR_1_LINE_25,
     HEIGHT_FLOOR_2_LINE_25,
-    HEIGHT_BUFFER,
+    HEIGHT_BUFFER
 )
 from mongodb import BufferDatabase
 from socket_server import SocketServer
 import logging
 from collections import deque
 import json
+import time
+
+# buffer_db = BufferDatabase()
 
 CW = []
 
@@ -66,8 +69,19 @@ class ProccessHandler:
                 "location": location,
             },
         )
-        print(f"Cờ kiểm tra vị trí robot: {flag}")
-        asyncio.sleep(3)
+        # print(f"Cờ kiểm tra vị trí robot: {flag}")
+        if flag.status_code == 200:
+            data = flag.json()
+            print(f"Flag location: {data}")
+            if str(data) == "True":
+                print("Robot đã tới vị trí")
+                return True
+            else:
+                print("Robot chưa tới vị trí")
+                return False
+        else:
+            print("Yêu cầu không thành công")
+            return False
 
     def control_robot_conveyor(self, direction):
         """
@@ -82,7 +96,7 @@ class ProccessHandler:
             response = requests.post(
                 f"{self.robot_url}/conveyor",
                 json={
-                    "type": direction,
+                    "data": direction,
                 },
             )
             if response.status_code != 200:
@@ -166,25 +180,6 @@ class ProccessHandler:
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển nâng băng tải của robot"
             ) from e
-        
-    def check_robot_conveyor_height(self, height):
-        """
-        Hàm này kiểm tra độ cao của băng tải của robot.
-        """
-        try:
-            response = requests.get(f"{self.robot_url}/lift?height={height}")
-            if response.status_code != 200:
-                raise requests.exceptions.RequestException(
-                    f"Lỗi đường truyền khi kiểm tra độ cao băng tải của robot. Mã trạng thái: {response.status_code}"
-                )
-            return response
-        except requests.exceptions.RequestException as e:
-            print(
-                f"Lỗi trong quá trình kiểm tra độ cao băng tải của robot: {str(e)}"
-            )
-            raise requests.exceptions.RequestException(
-                "Thất bại khi kiểm tra độ cao băng tải của robot"
-            ) from e
 
     def get_data_from_socket_server(self):
         """
@@ -201,17 +196,16 @@ class ProccessHandler:
             print(f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}")
             raise e from None
         
-    def get_mission_data_from_socket_server(self):
-        """Hàm này để lấu thông tin nhiệm vụ từ socket server"""
+    def get_mission_from_socket_server(self):
         try:
-            # Lấy thông tin nhiệm vụ từ socket server
-            mission_data = socket_server.get_mission_data()
-            if not mission_data:
-                logging.warning("Không có dữ liệu nhiệm vụ từ socket server")
+            # Lấy dữ liệu từ socket server
+            data = socket_server.get_mission_data()
+            if not data:
+                logging.warning("Không có dữ liệu từ socket server")
                 return
-            return mission_data
+            return data
         except Exception as e:
-            print(f"Lỗi trong quá trình lấy thông tin nhiệm vụ từ socket server: {str(e)}")
+            print(f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}")
             raise e from None
 
     def is_duplicate_mission(self, new_mission):
@@ -231,9 +225,9 @@ class ProccessHandler:
 
     def _validate_mission_data(self, mission_data):
         """Kiểm tra tính hợp lệ của dữ liệu nhiệm vụ"""
-        line = mission_data.get("line")
-        machine_type = mission_data.get("machine_type")
-        floor = mission_data.get("floor")
+        line = mission_data["line"]
+        floor = mission_data["floor"]
+        machine_type = mission_data["machine_type"]
 
         if not line or not machine_type or not floor:
             raise ValueError(
@@ -244,39 +238,42 @@ class ProccessHandler:
 
     def _create_mission_from_data(self, line, machine_type, floor):
         """Tạo nhiệm vụ từ dữ liệu đã xác thực"""
-        if line not in MAP_LINE:
-            raise ValueError(f"Không tìm thấy thông tin cho line: {line}")
+        if line is not None:
+            if line not in MAP_LINE:
+                raise ValueError(f"Không tìm thấy thông tin cho line: {line}")
 
-        station = MAP_LINE[line]
-        pick_up, destination = (
-            (station[1], station[0])
-            if machine_type == "loader"
-            else (station[0], station[1])
-        )
-        logging.info(f"Tạo nhiệm vụ từ {pick_up} đến {destination}")
+            station = MAP_LINE[line]
+            pick_up, destination = (
+                (station[0], station[1])
+                if floor == 2
+                else (station[1], station[0])
+            )
+            logging.info(f"Tạo nhiệm vụ từ {pick_up} đến {destination}")
 
-        # Xử lý tạo nhiệm vụ nếu có thông tin tầng
-        for i in floor:
-            if i != 0:
-                new_mission = {
-                    "pick_up": pick_up,
-                    "destination": destination,
-                    "floor": i,
-                    "line": line,
-                    "machine_type": machine_type,
-                }
-                if not self.is_duplicate_mission(new_mission):
-                    self.mission.append(new_mission)
-                    logging.info(f"Đã thêm nhiệm vụ mới: {new_mission}")
-                else:
-                    raise ValueError("Nhiệm vụ này đã tồn tại trong danh sách chờ")
+            # Xử lý tạo nhiệm vụ nếu có thông tin tầng
+            new_mission = {
+                "pick_up": pick_up,
+                "destination": destination,
+                "floor": floor,
+                "line": line,
+                "machine_type": machine_type,
+            }
+            if not self.is_duplicate_mission(new_mission):
+                self.mission.append(new_mission)
+                logging.info(f"Đã thêm nhiệm vụ mới: {new_mission}")
+            else:
+                raise ValueError("Nhiệm vụ này đã tồn tại trong danh sách chờ")
 
     def create_mission(self):
         """Hàm này lấy thông tin nhiệm vụ từ socket server và thêm vào danh sách nhiệm vụ."""
         while True:
             try:
                 try:
-                    mission_data = self.get_mission_data_from_socket_server()
+                    mission_data = None
+                    while mission_data is None:
+                        print("Chưa có dữ liệu để tạo nhiệm vụ")
+                        mission_data = self.get_mission_from_socket_server()
+                        time.sleep(10)
                 except (SyntaxError, ValueError, NameError) as e:
                     raise ValueError(f"Dữ liệu nhận được không đúng định dạng: {str(e)}")
 
@@ -325,14 +322,11 @@ class ProccessHandler:
         try:
             # Kiểm tra nếu là tầng 2 thì điều khiển năng băng tải
             if floor == 2:
-                height = HEIGHT_FLOOR_2_LINE_25
+                self.control_folk_conveyor(HEIGHT_FLOOR_2_LINE_25)
+                print("Robot nâng băng tải tầng 2")
             elif floor == 1:
-                height = HEIGHT_FLOOR_1_LINE_25
-            self.control_folk_conveyor(height)
-
-            # Kiểm tra dộ cao của băng tải
-            while not self.check_robot_conveyor_height(height):
-                print("Robot đang thao tác với băng tải")
+                self.control_folk_conveyor(HEIGHT_FLOOR_1_LINE_25)
+                print("Robot nâng băng tải tầng 1")
 
             # Robot mở stopper
             self.control_robot_stopper(direction, "open")
@@ -354,13 +348,10 @@ class ProccessHandler:
             elif type == "drop_off":
                 # Kiểm tra xem máy đã nhận magazine
                 i = floor - 1
-                data_check = self.get_data_from_socket_server()
-                for value in data_check:
-                    if value["line"] == line and value["machine_type"] == machine_type:
-                        while value["floor"][i] != 0:
-                            print("Máy chưa nhận xong magazine!!!")
-                        break
-
+                data_check = ""
+                while not data_check["floor"][i] == 0:
+                    print("Máy chưa nhận xong magazine!!!")
+                    data_check = self.get_data_from_socket_server()
             # Robot đóng stopper
             self.control_robot_stopper(direction, "close")
 
