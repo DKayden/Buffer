@@ -15,72 +15,38 @@ def monitor_data():
     """Giám sát và hiển thị dữ liệu nhận được từ server"""
     while not stop_threads:
         data = socket_server.get_mission_data()
-        # print("data", data)
-
-        line = data.get("line")
-        floor = data.get("floor")
-        machine_type = data.get("machine_type")
-        # print(f"Line: {line}, Floor: {floor}, Machine type: {machine_type}")
-
-        if line is not None:
-            if line not in MAP_LINE:
-                raise ValueError(f"Không tìm thấy thông tin cho line: {line}")
-
-            station = MAP_LINE[line]
-            pick_up, destination = (
-                (station[0], station[1])
-                if floor == 2
-                else (station[1], station[0])
-            )
-            new_mission = {
-                "pick_up": pick_up,
-                "destination": destination,
-                "floor": floor,
-                "line": line,
-                "machine_type": machine_type,
-            }
-            print(f"Nhiệm vụ mới : {new_mission}")
-            # missions = []
-            # for mission in missions:
-            #     print(f"Mision: {mission}")
-            #     if (
-            #     mission["pick_up"] != new_mission["pick_up"]
-            #     and mission["destination"] != new_mission["destination"]
-            #     and mission["floor"] != new_mission["floor"]
-            #     and mission["line"] != new_mission["line"]
-            #     and mission["machine_type"] != new_mission["machine_type"]
-            #     ):
-            #         missions.append(new_mission)
-
-            #     else:
-            #         print("Đã tồn tại nhiệm vụ này")
-            # new_mission = json.dumps(data_new_mission)
-            # print(f"New Mission: {new_mission}")
-            # print("Pickup: " ,{new_mission["pick_up"]})
-            # print("Destination: ", {new_mission["destination"]})
-            # process_handler.create_mission()
-            # for mission in missions:
-            print("Bắt đầu thực thi nhiệm vụ")
-            process_handler.control_robot_to_location(new_mission["pick_up"])
+        process_handler.create_mission(data)
+        list_mission = process_handler.mission
+        for mission in list_mission:
+            process_handler.control_robot_to_location(mission["pick_up"])
             print("Robot dang di chuyen toi pickup")
-            while not process_handler.check_location_robot(new_mission["pick_up"]):
+            while not process_handler.check_location_robot(mission["pick_up"]):
                 print("Robot chua hoan thanh di chuyen toi pickup")
-            process_handler.control_folk_conveyor(400)
-            time.sleep(6)
-            process_handler.control_folk_conveyor(100)
-            time.sleep(6)
+                time.sleep(6)
+            # process_handler.control_folk_conveyor(400)
+            # while not process_handler.check_lift_conveyor(400):
+            #     print("Robot chua dat do cao bang tai")
+            #     time.sleep(6)
+            # process_handler.control_folk_conveyor(700)
+            # while not process_handler.check_lift_conveyor(700):
+            #     print("Robot chua dat do cao bang tai")
+            #     time.sleep(6)
             process_handler.control_robot_stopper("cw","open")
             time.sleep(6)
             process_handler.control_robot_conveyor("cw")
             time.sleep(6)
+            # while process_handler.check_sensor_robot() != "Sensor trai":
+            #     print("Chua hoan thanh nhan hang")
+            #     time.sleep(4)
             process_handler.control_robot_conveyor("stop")
             time.sleep(4)
             process_handler.control_robot_stopper("cw","close")
             time.sleep(4)
-            process_handler.control_robot_to_location(new_mission["destination"])
-            while not process_handler.check_location_robot(new_mission["destination"]):
+            process_handler.control_robot_to_location(mission["destination"])
+            while not process_handler.check_location_robot(mission["destination"]):
                 print("Robot chua hoan thanh di chuyen toi destination")
-            time.sleep(6)
+                time.sleep(6)
+            
 
             # process_handler.control_robot_to_location()
                 # Xây dựng thông điệp với giá trị trường là chuỗi bình thường mà không có dấu ngoặc kép thừa

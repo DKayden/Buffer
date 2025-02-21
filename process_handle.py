@@ -39,7 +39,7 @@ socket_server = SocketServer()
 class ProccessHandler:
     def __init__(self):
         self.robot_url = f"http://{ROBOT_HOST}:{ROBOT_PORT}"
-        self.mission = deque()
+        self.mission = []
 
     def control_robot_to_location(self, location):
         try:
@@ -69,10 +69,8 @@ class ProccessHandler:
                 "location": location,
             },
         )
-        # print(f"Cờ kiểm tra vị trí robot: {flag}")
         if flag.status_code == 200:
             data = flag.json()
-            print(f"Flag location: {data}")
             if str(data) == "True":
                 print("Robot đã tới vị trí")
                 return True
@@ -180,6 +178,47 @@ class ProccessHandler:
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển nâng băng tải của robot"
             ) from e
+        
+    def check_lift_conveyor(self, height):
+        try:
+            response = requests.get(
+                f"{self.robot_url}/lift?height={height}"
+            )
+            if response.status_code != 200:
+                raise requests.exceptions.RequestException(
+                    f"Lỗi đường truyền khi kiểm tra nâng băng tải của robot. Mã trạng thái: {response.status_code}"
+                )
+            data = response.json()
+            if str(data) == "True":
+                print("Băng tải đã tới vị trí")
+                return True
+            else:
+                print("Băng tải chưa tới vị trí")
+                return False
+            # print("Kiểm tra băng tải của robot đã được điều khiển thành công")
+        except requests.exceptions.RequestException as e:
+            print(f"Lỗi trong quá trình điều khiển nâng băng tải của robot: {str(e)}")
+            raise requests.exceptions.RequestException(
+                "Thất bại khi kiểm tra nâng băng tải của robot"
+            ) from e
+
+    def check_sensor_robot(self):
+        try:
+            response = requests.get(f"{self.robot_url}/sensor")
+            if response.status_code != 200:
+                raise requests.exceptions.RequestException(
+                    f"Loi duong truyen khi kiem tra sensor cua robot"
+                )
+            data =   response.json()
+            if data[6] == 0:
+                return "Sensor trai"
+            elif data[5] == 0:
+                return "Sensor phai"
+        except requests.exceptions.RequestException as e:
+            print(f"Loi trong qua trinh kiem ra sensor: {str(e)}")
+            raise requests.exceptions.RequestException(
+                "That bai trong kiem tra sensor cua robot"
+            ) from e
 
     def get_data_from_socket_server(self):
         """
@@ -225,9 +264,9 @@ class ProccessHandler:
 
     def _validate_mission_data(self, mission_data):
         """Kiểm tra tính hợp lệ của dữ liệu nhiệm vụ"""
-        line = mission_data["line"]
-        floor = mission_data["floor"]
-        machine_type = mission_data["machine_type"]
+        line = mission_data.get("line")
+        floor = mission_data.get("floor")
+        machine_type = mission_data.get("machine_type")
 
         if not line or not machine_type or not floor:
             raise ValueError(
@@ -248,7 +287,6 @@ class ProccessHandler:
                 if floor == 2
                 else (station[1], station[0])
             )
-            logging.info(f"Tạo nhiệm vụ từ {pick_up} đến {destination}")
 
             # Xử lý tạo nhiệm vụ nếu có thông tin tầng
             new_mission = {
@@ -261,28 +299,23 @@ class ProccessHandler:
             if not self.is_duplicate_mission(new_mission):
                 self.mission.append(new_mission)
                 logging.info(f"Đã thêm nhiệm vụ mới: {new_mission}")
-            else:
-                raise ValueError("Nhiệm vụ này đã tồn tại trong danh sách chờ")
+            # else:
+            #     raise ValueError("Nhiệm vụ này đã tồn tại trong danh sách chờ")
 
-    def create_mission(self):
+    def create_mission(self , data):
         """Hàm này lấy thông tin nhiệm vụ từ socket server và thêm vào danh sách nhiệm vụ."""
-        while True:
-            try:
-                try:
-                    mission_data = None
-                    while mission_data is None:
-                        print("Chưa có dữ liệu để tạo nhiệm vụ")
-                        mission_data = self.get_mission_from_socket_server()
-                        time.sleep(10)
-                except (SyntaxError, ValueError, NameError) as e:
-                    raise ValueError(f"Dữ liệu nhận được không đúng định dạng: {str(e)}")
+        # while True:
 
-                line, machine_type, floor = self._validate_mission_data(mission_data)
-                self._create_mission_from_data(line, machine_type, floor)
+        try:
+            line = data.get("line")
+            floor = data.get("floor")
+            machine_type = data.get("machine_type")
 
-            except Exception as e:
-                logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
-                raise
+            self._create_mission_from_data(line, machine_type, floor)
+
+        except Exception as e:
+            logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
+            raise
 
     def request_get_magazine(self, location, line, floor, machine_type):
         """
