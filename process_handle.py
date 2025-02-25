@@ -156,6 +156,32 @@ class ProccessHandler:
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển cửa băng tải của robot"
             ) from e
+        
+    def check_stopper_robot(self, action, status):
+        try:
+            if status not in ["open", "close"]:
+                raise ValueError("Hành động đóng cửa phải là 'open' hoặc 'close'.")
+            response = requests.get(
+                f"{self.robot_url}/stopper",
+                json={"action": action, "status": status},
+            )
+            if response.status_code != 200:
+                raise requests.exceptions.RequestException(
+                    f"Lỗi đường truyền khi điều khiển cửa băng tải của robot. Mã trạng thái: {response.status_code}"
+                )
+            data = response.json()
+            if str(data) == "True":
+                print("Stopper da dung trang thai")
+                return True
+            else:
+                print("Stopper chua dung trang thai")
+                return False
+        except requests.exceptions.RequestException as e:
+            print(f"Lỗi trong quá trình điều khiển cửa băng tải của robot: {str(e)}")
+            raise requests.exceptions.RequestException(
+                "Thất bại khi điều khiển cửa băng tải của robot"
+            ) from e
+            
 
     def control_folk_conveyor(self, height):
         """
@@ -209,7 +235,7 @@ class ProccessHandler:
                 raise requests.exceptions.RequestException(
                     f"Loi duong truyen khi kiem tra sensor cua robot"
                 )
-            data =   response.json()
+            data = response.json()
             if data[6] == 0:
                 return "Sensor trai"
             elif data[5] == 0:
