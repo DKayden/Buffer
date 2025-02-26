@@ -9,7 +9,7 @@ class ModbusClient:
         if type == "tcp":
             self.mb_client= ModbusTcpClient(host=self.mb_host, port=self.mb_port, framer=ModbusSocketFramer)
         elif type == "rtu":
-            self.mb_client = ModbusSerialClient(port='/dev/ttyUSB0', baudrate=19200, bytesize=8, parity='N', stopbits=1)
+            self.mb_client = ModbusSerialClient(port='/dev/ttyUSB0', baudrate=115200, bytesize=8, parity='N', stopbits=1)
     
     def connect(self) -> bool:
         try:

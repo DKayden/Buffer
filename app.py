@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from buffer import modbus_client
-from config import ACTION_ADDRESS, RECEIVE_ADDRESS, TRANSFER_ADDRESS
-
+from config import ACTION_ADDRESS, RECEIVE_ADDRESS, TRANSFER_ADDRESS, GIVE_ADDRESS
 
 app = FastAPI(
     title="Buffer API",
@@ -34,6 +33,10 @@ async def buffer(type: str):
 async def getmagazine():
     modbus_client.write_register(TRANSFER_ADDRESS, 1)
     return {"message": "Băng tải Buffer quay để nhận magazine"}
+
+@app.get("/confirmreceive")
+async def confirmreceive():
+    return modbus_client.read_input_register(GIVE_ADDRESS, 1)[0] == 1
 
 @app.get("/receivemagazine")
 async def receivemagazine(type: str):
