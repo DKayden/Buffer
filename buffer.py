@@ -8,8 +8,8 @@ modbus_client = ModbusClient(host=MODBUS_HOST, port=MODBUS_PORT, type=MODBUS_TYP
 #     modbus_client.write_register(TRANSFER_ADDRESS, 1)
 #     print("Buffer đang quay băng tải để nhận magazine")
 
-# def confirm_transfer_magazine():
-#     return modbus_client.read_holding_registers(TRANSFER_ADDRESS, 1)[0] == 0
+def confirm_transfer_magazine():
+    return modbus_client.read_input_register(TRANSFER_ADDRESS, 1)[0]
     
 def buffer_action(action):
     try:
@@ -26,8 +26,8 @@ def buffer_action(action):
         raise
 
 def confirm_receive_magazine():
-    print("Data confirm: ", modbus_client.read_holding_registers(GIVE_ADDRESS, 1)[0])
-    return modbus_client.read_holding_registers(GIVE_ADDRESS, 1)[0] == 1
+    # print("Data confirm: ", modbus_client.read_input_register(GIVE_ADDRESS, 1)[0])
+    return modbus_client.read_input_register(GIVE_ADDRESS, 1)[0] == 1
     
 def robot_wanna_receive_magazine():
     modbus_client.write_register(GIVE_ADDRESS, 1)
@@ -38,5 +38,5 @@ def robot_confirm_receive_magazine():
     print("Robot xác nhận đã lấy magazine")
 
 def buffer_allow_action():
-    print("Data Buffer allow: ", modbus_client.read_input_register(CHECK_ADDRESS, 1))
+    # print("Data Buffer allow: ", modbus_client.read_input_register(CHECK_ADDRESS, 1))
     return modbus_client.read_input_register(CHECK_ADDRESS, 1)[0] == 0

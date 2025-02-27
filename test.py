@@ -25,44 +25,62 @@ def monitor_data():
                 print("Robot chua hoan thanh di chuyen toi pickup")
                 # process_handler.control_robot_to_location(mission["pick_up"])
                 time.sleep(6)
+            buffer.confirm_transfer_magazine()
             process_handler.control_folk_conveyor(400)
             while not process_handler.check_lift_conveyor(400):
                 print("Robot chua dat do cao bang tai")
                 time.sleep(6)
-            process_handler.control_folk_conveyor(700)
-            while not process_handler.check_lift_conveyor(700):
+            process_handler.control_folk_conveyor(100)
+            while not process_handler.check_lift_conveyor(100):
                 print("Robot chua dat do cao bang tai")
                 time.sleep(6)
             process_handler.control_robot_stopper("cw","open")
-            time.sleep(6)
+            # time.sleep(6)
             while not process_handler.check_stopper_robot("cw","open"):
                 print("Stopper chua dung trang thai")
-                time.sleep(6)
-            process_handler.control_robot_conveyor("ccw")
-            time.sleep(6)
-            while not process_handler.check_conveyor_robot("ccw"):
-                print("Robot chua hoan thanh dieu khien bang tai")
-                time.sleep(6)
-            while process_handler.check_sensor_robot() != "Sensor phai":
-                print("Chua hoan thanh nhan hang")
-                time.sleep(4)
-            process_handler.control_robot_conveyor("stop")
-            time.sleep(6)
-            while not process_handler.check_conveyor_robot("stop"):
-                print("Robot chua hoan thanh dieu khien bang tai")
                 time.sleep(6)
             while not buffer.buffer_allow_action():
                 print("Buffer chua san sang")
             buffer.buffer_action("flip")
+            print("Data confirm 1: ", buffer.confirm_transfer_magazine())
+            process_handler.control_robot_conveyor("ccw")
+            while not process_handler.check_conveyor_robot("ccw"):
+                print("Robot chua hoan thanh dieu khien bang tai")
+                time.sleep(20)
+            print("Data confirm 2: ", buffer.confirm_transfer_magazine())
+            # while process_handler.check_sensor_robot() == "Sensor trai" and process_handler.check_sensor_robot() == "Sensor phai":
+            #     print("Bang tai robot dang quayy")
+            #     time.sleep(20)
+            # while buffer.confirm_transfer_magazine() == 1:
+            #     print("Buffer chua nhan duoc hang")
+            #     time.sleep(3)
+            # while buffer.confirm_transfer_magazine() == 0:
+            process_handler.control_robot_conveyor("stop")
+            #     time.sleep(6)
+            while not process_handler.check_conveyor_robot("stop"):
+                print("Robot chua hoan thanh dieu khien bang tai")
+                time.sleep(6)
             while not buffer.confirm_receive_magazine():
                 print("Buffer chua xu ly xong")
-                time.sleep(20)
+                # buffer.confirm_transfer_magazine()
+                time.sleep(2)
+            process_handler.control_robot_conveyor("cw")
+            while not process_handler.check_conveyor_robot("cw"):
+                print("Robot chua hoan thanh dieu khien bang tai")
+                time.sleep(6)
             buffer.robot_wanna_receive_magazine()
             time.sleep(10)
             buffer.robot_confirm_receive_magazine()
-            time.sleep(6)
+            # time.sleep(6)
+            while process_handler.check_sensor_robot() != "Sensor trai":
+                print("Chua hoan thanh nhan hang")
+            process_handler.control_robot_conveyor("stop")
+            # time.sleep(6)
+            while not process_handler.check_conveyor_robot("stop"):
+                print("Robot chua hoan thanh dieu khien bang tai")
+                time.sleep(6)
             process_handler.control_robot_stopper("cw","close")
-            time.sleep(4)
+            # time.sleep(4)
             while not process_handler.check_stopper_robot("cw","close"):
                 print("Stopper chua dung trang thai")
                 time.sleep(6)
@@ -91,6 +109,7 @@ def monitor_data():
 if __name__ == "__main__":
     # Khởi tạo server
     # buffer.robot_confirm_receive_magazine()
+    # buffer.confirm_transfer_magazine()
     server = socket_server
 
     # Tạo và khởi động thread giám sát dữ liệu
@@ -100,14 +119,14 @@ if __name__ == "__main__":
     # )
     monitor_thread.start()
 
-    # try:
-    #     # Khởi động server
-    #     print("Đang khởi động server...")
-    #     server.start()
-    # except KeyboardInterrupt:
-    #     # Xử lý khi người dùng nhấn Ctrl+C
-    #     print("\nĐang dừng server...")
-    #     server.stop()
-    # except Exception as e:
-    #     print(f"Lỗi: {e}")
-    #     server.stop()
+    try:
+        # Khởi động server
+        print("Đang khởi động server...")
+        server.start()
+    except KeyboardInterrupt:
+        # Xử lý khi người dùng nhấn Ctrl+C
+        print("\nĐang dừng server...")
+        server.stop()
+    except Exception as e:
+        print(f"Lỗi: {e}")
+        server.stop()
