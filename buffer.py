@@ -14,10 +14,10 @@ def confirm_transfer_magazine():
 def buffer_action(action):
     try:
         if action == "flip":
-            modbus_client.write_register(ACTION_ADDRESS, 2)
+            modbus_client.write_register(ACTION_ADDRESS, 1)
             print("Buffer đã nhận lệnh lật")
         elif action == "circular":
-            modbus_client.write_register(ACTION_ADDRESS, 1)
+            modbus_client.write_register(ACTION_ADDRESS, 2)
             print("Buffer đã nhận lệnh xoay")
         else:
             raise ValueError("Loại hành động không hợp lệ")

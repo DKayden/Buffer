@@ -29,7 +29,7 @@ CALL_PORT = 5000
 MAP_ADDRESS = [["192.168.1.27", "192.168.1.28"]]
 
 MAP_LINE = {
-    "line 25" : ["LM7082", "LM7083"]
+    "line 25" : ["LM4", "LM3"]
 }
 
 HEIGHT_BUFFER = 45

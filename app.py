@@ -21,10 +21,10 @@ app.add_middleware(
 @app.get("/buffer")
 async def buffer(type: str):
     if type == "flip":
-        modbus_client.write_register(ACTION_ADDRESS, 2)
+        modbus_client.write_register(ACTION_ADDRESS, 1)
         return {"message": "Buffer đã nhận lệnh lật!"}
     elif type == "circular":
-        modbus_client.write_register(ACTION_ADDRESS, 1)
+        modbus_client.write_register(ACTION_ADDRESS, 2)
         return {"message": "Buffer đã nhận lệnh xoay."}
     else:
         return {"error": "Loại hành động không hợp lệ."}
@@ -41,9 +41,9 @@ async def confirmreceive():
 @app.get("/receivemagazine")
 async def receivemagazine(type: str):
     if type == "confirm":
-        modbus_client.write_register(RECEIVE_ADDRESS, 0)
+        modbus_client.write_register(GIVE_ADDRESS, 1)
         return {"message": "AMR xác nhận đã tới lấy."}
     elif type == "done":
-        modbus_client.write_register(RECEIVE_ADDRESS, 1)
+        modbus_client.write_register(GIVE_ADDRESS, 0)
         return {"message": "AMR xác nhận đã hoàn thành lấy."}
     

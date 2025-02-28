@@ -1,5 +1,5 @@
 Thanh ghi
-0: 1/2 (1 la xoay, 2 la lat)
+0: 1/2 (1 la lat, 2 la xoay)
 1: 0/1 (1 quay bang tai cho phep truyen magazine vao bufer, 0 la bufer da nhan duoc magazine)
 2(read_input_register): 0/1 (1 là buffer báo amr nhận lại được magazine)
 2(write_holding_register): 0/1 (0 lấy thành công, 1 yêu cầu lấy hàng ra)
