@@ -19,7 +19,7 @@ from config import (
     BUFFER_ACTION,
     HEIGHT_FLOOR_1_LINE_25,
     HEIGHT_FLOOR_2_LINE_25,
-    HEIGHT_BUFFER
+    HEIGHT_BUFFER,
 )
 from mongodb import BufferDatabase
 from socket_server import SocketServer
@@ -156,7 +156,7 @@ class ProccessHandler:
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển cửa băng tải của robot"
             ) from e
-        
+
     def check_stopper_robot(self, action, status):
         try:
             if status not in ["open", "close"]:
@@ -181,7 +181,6 @@ class ProccessHandler:
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển cửa băng tải của robot"
             ) from e
-            
 
     def control_folk_conveyor(self, height):
         """
@@ -204,12 +203,10 @@ class ProccessHandler:
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển nâng băng tải của robot"
             ) from e
-        
+
     def check_lift_conveyor(self, height):
         try:
-            response = requests.get(
-                f"{self.robot_url}/lift?height={height}"
-            )
+            response = requests.get(f"{self.robot_url}/lift?height={height}")
             if response.status_code != 200:
                 raise requests.exceptions.RequestException(
                     f"Lỗi đường truyền khi kiểm tra nâng băng tải của robot. Mã trạng thái: {response.status_code}"
@@ -233,18 +230,25 @@ class ProccessHandler:
             response = requests.get(f"{self.robot_url}/sensor")
             if response.status_code != 200:
                 raise requests.exceptions.RequestException(
-                    f"Loi duong truyen khi kiem tra sensor cua robot"
+                    "Lỗi đường truyền khi kiểm tra sensor của robot"
                 )
             data = response.json()
-            if data[6] == 0:
-                return "Sensor trai"
-            elif data[5] == 0:
-                return "Sensor phai"
+            return data
+            # if data[6] == 0:
+            #     return "Sensor trai"
+            # elif data[5] == 0:
+            #     return "Sensor phai"
         except requests.exceptions.RequestException as e:
-            print(f"Loi trong qua trinh kiem ra sensor: {str(e)}")
+            print(f"Lỗi trong quá trình kiểm tra sensor: {str(e)}")
             raise requests.exceptions.RequestException(
-                "That bai trong kiem tra sensor cua robot"
+                "Thất bại trong kiểm tra sensor của robot"
             ) from e
+
+    def check_sensor_left_robot(self):
+        return self.check_sensor_robot()[6] == 0
+
+    def check_sensor_right_robot(self):
+        return self.check_sensor_robot()[5] == 0
 
     def get_data_from_socket_server(self):
         """
@@ -260,7 +264,7 @@ class ProccessHandler:
         except Exception as e:
             print(f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}")
             raise e from None
-        
+
     def get_mission_from_socket_server(self):
         try:
             # Lấy dữ liệu từ socket server
@@ -309,9 +313,7 @@ class ProccessHandler:
 
             station = MAP_LINE[line]
             pick_up, destination = (
-                (station[0], station[1])
-                if floor == 2
-                else (station[1], station[0])
+                (station[0], station[1]) if floor == 2 else (station[1], station[0])
             )
 
             # Xử lý tạo nhiệm vụ nếu có thông tin tầng
@@ -323,15 +325,22 @@ class ProccessHandler:
                 "machine_type": machine_type,
             }
             if not self.is_duplicate_mission(new_mission):
-                self.mission.append(new_mission)
+                if floor == 1:
+                    insert_pos = 0
+                    for i, mission in enumerate(self.mission):
+                        if mission["floor"] == 2:
+                            insert_pos = i
+                            break
+                        insert_pos = i + 1
+                    self.mission.insert(insert_pos, new_mission)
+                else:
+                    self.mission.append(new_mission)
                 logging.info(f"Đã thêm nhiệm vụ mới: {new_mission}")
             # else:
             #     raise ValueError("Nhiệm vụ này đã tồn tại trong danh sách chờ")
 
-    def create_mission(self , data):
+    def create_mission(self, data):
         """Hàm này lấy thông tin nhiệm vụ từ socket server và thêm vào danh sách nhiệm vụ."""
-        # while True:
-
         try:
             line = data.get("line")
             floor = data.get("floor")
@@ -380,15 +389,26 @@ class ProccessHandler:
         """
         try:
             # Kiểm tra nếu là tầng 2 thì điều khiển năng băng tải
+            height = 0
             if floor == 2:
-                self.control_folk_conveyor(HEIGHT_FLOOR_2_LINE_25)
-                print("Robot nâng băng tải tầng 2")
+                height = HEIGHT_FLOOR_2_LINE_25
             elif floor == 1:
-                self.control_folk_conveyor(HEIGHT_FLOOR_1_LINE_25)
-                print("Robot nâng băng tải tầng 1")
+                height = HEIGHT_FLOOR_1_LINE_25
+            self.control_folk_conveyor(height)
+            print("Robot nâng băng tải")
+
+            # Kiểm tra xem băng tải đã được nâng tới đúng tầng chưa
+            while not self.check_lift_conveyor(height):
+                print("Robot chưa đạt độ cao băng tải")
+                asyncio.sleep(6)
 
             # Robot mở stopper
             self.control_robot_stopper(direction, "open")
+
+            # Kiểm tra robot đã mở stopper chưa
+            while not self.check_stopper_robot(direction, "open"):
+                print("Stopper chưa mở")
+                asyncio.sleep(6)
 
             # Gửi thông tin đến máy
             self.request_get_magazine(location, line, floor, machine_type)
@@ -397,9 +417,14 @@ class ProccessHandler:
             self.control_robot_conveyor(direction)
             print("Robot quay băng tải để chuyển hàng với máy")
 
+            # Kiểm tra robot đã quay băng tải chưa
+            while not self.check_conveyor_robot(direction):
+                print("Robot chưa hoàn thành điểu khiển quay băng tải")
+                asyncio.sleep(20)
+
             if type == "pick_up":
                 # Kiểm tra xem robot đã nhận magazine từ máy
-                while self.check_conveyor_robot(direction):
+                while not self.check_sensor_left_robot():
                     print("Robot chưa nhận magazine từ máy!!!")
                     asyncio.sleep(3)
                 print("Robot đã nhận magazine từ máy!!!")
@@ -408,14 +433,25 @@ class ProccessHandler:
                 # Kiểm tra xem máy đã nhận magazine
                 i = floor - 1
                 data_check = ""
-                while not data_check["floor"][i] == 0:
+                while data_check["floor"][i] != 0:
                     print("Máy chưa nhận xong magazine!!!")
                     data_check = self.get_data_from_socket_server()
             # Robot đóng stopper
             self.control_robot_stopper(direction, "close")
 
+            # Kiểm tra robot đã đóng stopper chưa
+            while not self.check_stopper_robot(direction, "close"):
+                print("Stopper chưa đóng")
+                asyncio.sleep(6)
+
             # Robot dừng băng tải
             self.control_robot_conveyor("stop")
+
+            # Kiểm tra robot đã dừng băng tải chưa
+            while not self.check_conveyor_robot("stop"):
+                print("Robot chưa hoàn thành điểu khiển dừng băng tải")
+                asyncio.sleep(20)
+
         except Exception as e:
             logging.error(
                 f"Xảy ra lỗi trong quá trình chuyển hàng giữa robot và máy: {str(e)}"
@@ -446,9 +482,6 @@ class ProccessHandler:
                     floor, dir_pick_up, pick_up, "pick_up", line, machine_type
                 )
 
-                # Gửi nhiệm vụ theo yêu cầu cho Buffer
-                buffer_action(action=BUFFER_ACTION)
-
                 # Điều khiển robot tới vị trí buffer
                 self.control_robot_to_location(BUFFER_LOCATION)
 
@@ -460,25 +493,40 @@ class ProccessHandler:
 
                 self.control_folk_conveyor(HEIGHT_BUFFER)
 
-                # Buffer quay băng tải để nhận magazine
-                allow_transfer_magazine()
+                # Gửi nhiệm vụ theo yêu cầu cho Buffer
+                buffer_action(action=BUFFER_ACTION)
                 asyncio.sleep(3)
 
                 # Robot mở stopper
                 self.control_robot_stopper("cw", "open")
 
+                # Kiểm tra robot đã mở stopper chưa
+                while not self.check_stopper_robot("cw", "open"):
+                    print("Stopper chưa mở")
+                    asyncio.sleep(6)
+
                 # Robot quay băng tải để truyền magazine vào buffer
                 self.control_robot_conveyor("ccw")
                 print("Robot quay băng tải để truyền magazine vào Buffer")
 
+                # Kiểm tra robot đã quay băng tải chưa
+                while not self.check_conveyor_robot("ccw"):
+                    print("Robot chưa hoàn thành điều khiển quay băng tải")
+                    asyncio.sleep(2)
+
                 # Chờ buffer xác nhận đã nhận xong magazine
-                while not confirm_transfer_magazine():
+                while confirm_transfer_magazine() != 0:
                     print("Buffer chưa hoàn thành nhận magazine!!!")
                     asyncio.sleep(3)
                 print("Buffer đã nhận magazine!!!")
 
                 # Robot dừng băng tải
                 self.control_robot_conveyor("stop")
+
+                # Kiểm tra robot đã dừng băng tải chưa
+                while not self.check_conveyor_robot("stop"):
+                    print("Robot chưa hoàn thành điều khiển dừng băng tải")
+                    asyncio.sleep(2)
 
                 # Chờ buffer xử lý xong và sẵn sàng để trả magazine
                 while not confirm_receive_magazine():
@@ -490,18 +538,36 @@ class ProccessHandler:
                 self.control_robot_conveyor("cw")
                 print("Robot quay băng tải để nhận magazine")
 
+                # Kiểm tra robot đã thành công điều khiển băng tải
+                while not self.check_conveyor_robot("cw"):
+                    print("Robot chưa hoàn thành điều khiển băng tải")
+                    asyncio.sleep(6)
+
                 # Robot xác nhận muốn lấy magazine
                 robot_wanna_receive_magazine()
                 asyncio.sleep(3)
 
                 # Kiểm tra xem robot đã nhận magazine từ buffer
-                while self.check_conveyor_robot("cw"):
+                while not self.check_sensor_left_robot():
                     print("Robot chưa nhận magazine từ Buffer!!!")
                     asyncio.sleep(3)
                 print("Robot đã nhận magazine từ Buffer!!!")
 
+                # Điều khiển dừng băng tải của robot
+                self.control_robot_conveyor("stop")
+
+                # Kiểm tra robot đã dừng băng tải chưachưa
+                while not self.check_conveyor_robot("stop"):
+                    print("Robot chưa hoàn thành điều khiển dừng băng tải")
+                    time.sleep(6)
+
                 # Robot đóng stopper
                 self.control_robot_stopper("cw", "close")
+
+                # Kiểm tra robot đã đóng stopper chưa
+                while not self.check_stopper_robot("cw", "close"):
+                    print("Stopper chưa đúng trạng thái")
+                    asyncio.sleep(6)
 
                 # Robot xác nhận đã lấy magazine xong
                 robot_confirm_receive_magazine()
@@ -516,7 +582,6 @@ class ProccessHandler:
                 self.process_handle_tranfer_goods(
                     floor, dir_destination, destination, "drop_off", line, machine_type
                 )
-
                 # Xóa nhiệm vụ đã hoàn thành
                 self.mission.popleft()
                 print(f"Nhiệm vụ đã hoàn thành: {self.mission}")
