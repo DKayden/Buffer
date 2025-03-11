@@ -7,6 +7,7 @@ from buffer import (
     buffer_action,
     robot_wanna_receive_magazine,
     robot_confirm_receive_magazine,
+    buffer_allow_action,
 )
 from config import (
     ROBOT_HOST,
@@ -508,6 +509,10 @@ class ProccessHandler:
                 while not self.check_lift_conveyor(HEIGHT_BUFFER):
                     print("Robot chưa đạt độ cao băng tải")
                     asyncio.sleep(6)
+
+                # Kiểm tra Buffer đã sẵn sàng thao tác chưa
+                while not buffer_allow_action():
+                    print("Buffer chua san sang")
 
                 # Gửi nhiệm vụ theo yêu cầu cho Buffer
                 action = self.line_configs.get((line, floor), {}).get("action")
