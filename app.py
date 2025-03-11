@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from buffer import modbus_client
-from config import ACTION_ADDRESS, RECEIVE_ADDRESS, TRANSFER_ADDRESS, GIVE_ADDRESS
+from config import ACTION_ADDRESS, TRANSFER_ADDRESS, GIVE_ADDRESS, TURN_ADDRESS
 
 app = FastAPI(
     title="Buffer API",
     openapi_url="/openapi.json",
     docs_url="/docs",
-    description="Buffer API documentation"
+    description="Buffer API documentation",
 )
 
 app.add_middleware(
@@ -16,7 +16,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    )
+)
+
 
 @app.get("/buffer")
 async def buffer(type: str):
@@ -28,15 +29,18 @@ async def buffer(type: str):
         return {"message": "Buffer đã nhận lệnh xoay."}
     else:
         return {"error": "Loại hành động không hợp lệ."}
-    
+
+
 @app.get("/getmagazine")
 async def getmagazine():
     modbus_client.write_register(TRANSFER_ADDRESS, 1)
     return {"message": "Băng tải Buffer quay để nhận magazine"}
 
+
 @app.get("/confirmreceive")
 async def confirmreceive():
     return modbus_client.read_input_register(GIVE_ADDRESS, 1)[0] == 1
+
 
 @app.get("/receivemagazine")
 async def receivemagazine(type: str):
@@ -46,4 +50,13 @@ async def receivemagazine(type: str):
     elif type == "done":
         modbus_client.write_register(GIVE_ADDRESS, 0)
         return {"message": "AMR xác nhận đã hoàn thành lấy."}
-    
+
+
+@app.post("turn")
+async def turn(direction: str):
+    if direction == "clockwise":
+        modbus_client.write_register(TURN_ADDRESS, 0)
+        return {"message": "Buffer đã nhận lệnh quay thuận."}
+    elif direction == "counterclockwise":
+        modbus_client.write_register(TURN_ADDRESS, 1)
+        return {"message": "Buffer đã nhận lệnh quay nghịch."}

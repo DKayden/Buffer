@@ -40,6 +40,18 @@ class ProccessHandler:
     def __init__(self):
         self.robot_url = f"http://{ROBOT_HOST}:{ROBOT_PORT}"
         self.mission = []
+        self.line_configs = {
+            ("line 25", 1): {
+                "height": HEIGHT_FLOOR_1_LINE_25,
+                "action": "flip",
+                "turn": "clockwise",
+            },
+            ("line 25", 2): {
+                "height": HEIGHT_FLOOR_2_LINE_25,
+                "action": "circular",
+                "turn": "counterclockwise",
+            },
+        }
 
     def control_robot_to_location(self, location):
         try:
@@ -225,7 +237,7 @@ class ProccessHandler:
                 "Thất bại khi kiểm tra nâng băng tải của robot"
             ) from e
 
-    def check_sensor_robot(self):
+    def get_information_sensor_robot(self):
         try:
             response = requests.get(f"{self.robot_url}/sensor")
             if response.status_code != 200:
@@ -245,10 +257,10 @@ class ProccessHandler:
             ) from e
 
     def check_sensor_left_robot(self):
-        return self.check_sensor_robot()[6] == 0
+        return self.get_information_sensor_robot()[6] == 0
 
     def check_sensor_right_robot(self):
-        return self.check_sensor_robot()[5] == 0
+        return self.get_information_sensor_robot()[5] == 0
 
     def get_data_from_socket_server(self):
         """
@@ -388,14 +400,10 @@ class ProccessHandler:
         Hàm này xử lý quá trình chuyển hàng giữa robot và máy
         """
         try:
-            # Kiểm tra nếu là tầng 2 thì điều khiển năng băng tải
-            height = 0
-            if floor == 2:
-                height = HEIGHT_FLOOR_2_LINE_25
-            elif floor == 1:
-                height = HEIGHT_FLOOR_1_LINE_25
+            # Điều khiển độ cao băng tải
+            height = self.line_configs.get((line, floor), {}).get("height")
             self.control_folk_conveyor(height)
-            print("Robot nâng băng tải")
+            print("Robot điều khiển độ cao băng tải")
 
             # Kiểm tra xem băng tải đã được nâng tới đúng tầng chưa
             while not self.check_lift_conveyor(height):
@@ -420,7 +428,7 @@ class ProccessHandler:
             # Kiểm tra robot đã quay băng tải chưa
             while not self.check_conveyor_robot(direction):
                 print("Robot chưa hoàn thành điểu khiển quay băng tải")
-                asyncio.sleep(20)
+                asyncio.sleep(2)
 
             if type == "pick_up":
                 # Kiểm tra xem robot đã nhận magazine từ máy
@@ -475,7 +483,9 @@ class ProccessHandler:
                 self.control_robot_to_location(pick_up)
 
                 # Kiểm tra xem robot đã tới vị trí lấy magazine
-                self.check_location_robot(pick_up)
+                while not self.check_location_robot(pick_up):
+                    print("Robot chưa tới vị trí lấy magazine!!!")
+                    asyncio.sleep(3)
 
                 # Xử lý chuyển hàng giữa robot và máy
                 self.process_handle_tranfer_goods(
@@ -491,11 +501,18 @@ class ProccessHandler:
                     asyncio.sleep(3)
                 print("Robot đã tới vị trí buffer!!!")
 
+                # Điều khiển chiều cao băng tải để tranfer hàng với buffer
                 self.control_folk_conveyor(HEIGHT_BUFFER)
 
+                # Kiểm tra xem chiều cao băng tải đã đạt yêu cầu chưa
+                while not self.check_lift_conveyor(HEIGHT_BUFFER):
+                    print("Robot chưa đạt độ cao băng tải")
+                    asyncio.sleep(6)
+
                 # Gửi nhiệm vụ theo yêu cầu cho Buffer
-                buffer_action(action=BUFFER_ACTION)
-                asyncio.sleep(3)
+                action = self.line_configs.get((line, floor), {}).get("action")
+                buffer_action(action)
+                # asyncio.sleep(3)
 
                 # Robot mở stopper
                 self.control_robot_stopper("cw", "open")
@@ -574,16 +591,19 @@ class ProccessHandler:
 
                 # Điều khiển robot tới vị trí trả magazine
                 self.control_robot_to_location(destination)
+                print("Robot đã tới vị trí trả magazine!!!")
 
                 # Kiểm tra xem robot đã tới vị trí trả magazine
-                self.check_location_robot(destination)
+                while not self.check_location_robot(destination):
+                    print("Robot chưa tới vị trí trả magazine!!!")
+                    asyncio.sleep(3)
 
                 # Xử lý chuyển hàng giữa robot và máy
                 self.process_handle_tranfer_goods(
                     floor, dir_destination, destination, "drop_off", line, machine_type
                 )
                 # Xóa nhiệm vụ đã hoàn thành
-                self.mission.popleft()
+                self.mission.pop(0)
                 print(f"Nhiệm vụ đã hoàn thành: {self.mission}")
 
                 return {"message": "Quá trình xử lý hoàn tất"}

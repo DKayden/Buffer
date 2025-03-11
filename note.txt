@@ -4,3 +4,4 @@ Thanh ghi
 2(read_input_register): 0/1 (1 là buffer báo amr nhận lại được magazine)
 2(write_holding_register): 0/1 (0 lấy thành công, 1 yêu cầu lấy hàng ra)
 4(read_input_register): 0: được phép thao tác. 1 busy
+5(write_holding_register): 0: quay thuận 90*, 1: quay nghịch 90*
