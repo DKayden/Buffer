@@ -1,7 +1,6 @@
 import requests
 import asyncio
 from buffer import (
-    allow_transfer_magazine,
     confirm_transfer_magazine,
     confirm_receive_magazine,
     buffer_action,
@@ -18,8 +17,10 @@ from config import (
     BUFFER_LOCATION,
     MAP_LINE,
     BUFFER_ACTION,
-    HEIGHT_FLOOR_1_LINE_25,
-    HEIGHT_FLOOR_2_LINE_25,
+    HEIGHT_FLOOR_1_LOADER_LINE_25,
+    HEIGHT_FLOOR_2_LOADER_LINE_25,
+    HEIGHT_FLOOR_1_UNLOADER_LINE_25,
+    HEIGHT_FLOOR_2_UNLOADER_LINE_25,
     HEIGHT_BUFFER,
 )
 from mongodb import BufferDatabase
@@ -42,13 +43,23 @@ class ProccessHandler:
         self.robot_url = f"http://{ROBOT_HOST}:{ROBOT_PORT}"
         self.mission = []
         self.line_configs = {
-            ("line 25", 1): {
-                "height": HEIGHT_FLOOR_1_LINE_25,
+            ("line 25", "loader", 1): {
+                "height": HEIGHT_FLOOR_1_LOADER_LINE_25,
                 "action": "flip",
                 "turn": "clockwise",
             },
-            ("line 25", 2): {
-                "height": HEIGHT_FLOOR_2_LINE_25,
+            ("line 25", "loader", 2): {
+                "height": HEIGHT_FLOOR_2_LOADER_LINE_25,
+                "action": "circular",
+                "turn": "counterclockwise",
+            },
+            ("line 25", "unloader", 1): {
+                "height": HEIGHT_FLOOR_1_UNLOADER_LINE_25,
+                "action": "flip",
+                "turn": "clockwise",
+            },
+            ("line 25", "unloader", 2): {
+                "height": HEIGHT_FLOOR_2_UNLOADER_LINE_25,
                 "action": "circular",
                 "turn": "counterclockwise",
             },
@@ -402,7 +413,7 @@ class ProccessHandler:
         """
         try:
             # Điều khiển độ cao băng tải
-            height = self.line_configs.get((line, floor), {}).get("height")
+            height = self.line_configs.get((line, machine_type, floor), {}).get("height")
             self.control_folk_conveyor(height)
             print("Robot điều khiển độ cao băng tải")
 
@@ -515,7 +526,7 @@ class ProccessHandler:
                     print("Buffer chua san sang")
 
                 # Gửi nhiệm vụ theo yêu cầu cho Buffer
-                action = self.line_configs.get((line, floor), {}).get("action")
+                action = self.line_configs.get((line, machine_type, floor), {}).get("action")
                 buffer_action(action)
                 # asyncio.sleep(3)
 
