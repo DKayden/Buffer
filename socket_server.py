@@ -70,17 +70,12 @@ class SocketServer:
                 processed_data = json.loads(data.decode("utf-8"))
 
                 # Lưu dữ liệu vào danh sách với thread safety
-                # if processed_data["floor"][0] != 0 or processed_data["floor"][1] != 0:
-
                 with self._lock:
-                    # self.receive_set_value.add(processed_data)
-                    # self.received_data.append(processed_data)
-                    # self.receive_dict_value
                     dict_value = {
                         address[0] : processed_data
                     }
                     self.receive_dict_value.update(dict_value)
-                    # print(f"Đã nhận dữ liệu {self.receive_dict_value}")
+                    print(f"Đã nhận dữ liệu {self.receive_dict_value}")
 
                     client1_data = None
                     client2_data = None
@@ -90,14 +85,11 @@ class SocketServer:
                                 client1_data = value
                             elif key == pair[1]:
                                 client2_data = value
-                    # print(f"Client 1: {client1_data}")
-                    # print(f"Client 2: {client2_data}")
                     if client1_data is not None and client2_data is not None:
                         if "floor" in client1_data and "floor" in client2_data:
                             for i in range(len(client1_data["floor"])):
                                 if (client1_data["floor"][i] == client2_data["floor"][i] and
                                     client1_data["floor"][i] != 0 and client2_data["floor"][i] != 0):
-                                    # print("Floor: ", {client1_data["floor"][i]})
                                     if client1_data["floor"][i] == 1:
                                         machine_type = "loader"
                                     elif client1_data["floor"][i] == 2:
@@ -108,14 +100,10 @@ class SocketServer:
                                         "machine_type" : machine_type
                                     }
                                     self.mission_data.update(mission_item)
-                    # print(f"Mission: {self.mission_data}")
-                # Gửi phản hồi cho client
-                # response = {"line": processed_data["line"], "floor": 0}
-                # client_socket.send(json.dumps(response).encode("utf-8"))
+                    print(f"Mission: {self.mission_data}")
 
         except Exception as e:
             print(f"Lỗi khi xử lý client {address}: {e}")
-            # pass
         finally:
             if client_socket in self.client_info:
                 del self.client_info[client_socket]
@@ -123,28 +111,27 @@ class SocketServer:
             self.clients.remove(client_socket)
             print(f"Đã đóng kết nối từ {address}")
 
+
     def get_received_data(self) -> List[Any]:
         """Phương thức để truy cập dữ liệu từ bên ngoài"""
         with self._lock:
             return self.received_data.copy()
-
-    def clear_data(self):
-        """Xóa toàn bộ dữ liệu đã nhận"""
-        with self._lock:
-            self.received_data.clear()
-
-    def remove_first_item(self):
-        """Xóa dữ liệu đầu tiên"""
-        with self._lock:
-            if self.received_data:
-                return self.received_data.pop(0)
-            return None
         
     def get_mission_data(self):
         with self._lock:
-            # print("receive_dict_value" , self.receive_dict_value)
-            # return self.receive_dict_value.copy()
             return self.mission_data.copy()
+        
+    def clear_mission_data(self):
+        """Xóa toàn bộ dữ liệu đã nhận"""
+        with self._lock:
+            self.mission_data.clear()
+
+    def remove_first_item_mission_data(self):
+        """Xóa dữ liệu đầu tiên"""
+        with self._lock:
+            if self.mission_data:
+                return self.mission_data.pop(0)
+            return None
 
     def stop(self):
         """Dừng server và đóng các socket"""

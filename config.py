@@ -12,12 +12,12 @@ ROBOT_PORT = 8000
 
 MODBUS_HOST = "localhost"
 MODBUS_PORT = 502
-MODBUS_TYPE = "rtu"
+MODBUS_TYPE = 'rtu'
 
 BUFFER_HOST = "localhost"
 BUFFER_PORT = 5000
 
-BUFFER_LOCATION = "LM7083"
+BUFFER_LOCATION = "LM3"
 BUFFER_ACTION = "flip"
 
 SOCKET_HOST = "192.168.1.100"
@@ -28,14 +28,45 @@ CALL_PORT = 5000
 
 MAP_ADDRESS = [["192.168.1.27", "192.168.1.28"]]
 
-MAP_LINE = {"line 25": ["LM4", "LM3"]}
+MAP_LINE = {
+    "line 25" : ["LM31", "LM29"]
+}
 
 HEIGHT_BUFFER = 56
 
-HEIGHT_FLOOR_1_LOADER_LINE_25 = 30
-HEIGHT_FLOOR_2_LOADER_LINE_25 = 770
-
-HEIGHT_FLOOR_1_UNLOADER_LINE_25 = 10
-HEIGHT_FLOOR_2_UNLOADER_LINE_25 = 720
+LINE_CONFIG = {
+            ("line 25", "loader", 1): {
+                "line_height": 30,
+                "buffer_action": "flip",
+                "buffer_turn": "clockwise",
+                "stopper_action" : "cw",
+                "conveyor_direction" : "ccw",
+                "sensor_check" : "right"
+            },
+            ("line 25", "loader", 2): {
+                "line_height": 770,
+                "buffer_action": "flip",
+                "buffer_turn": "clockwise",
+                "stopper_action" : "cw",
+                "conveyor_direction" : "cw",
+                "sensor_check" : "left"
+            },
+            ("line 25", "unloader", 1): {
+                "line_height": 10,
+                "buffer_action": "flip",
+                "buffer_turn": "clockwise",
+                "stopper_action" : "ccw",
+                "conveyor_direction" : "ccw",
+                "sensor_check" : "right"
+            },
+            ("line 25", "unloader", 2): {
+                "line_height": 720,
+                "buffer_action": "flip",
+                "buffer_turn": "clockwise",
+                "stopper_action" : "ccw",
+                "conveyor_direction" : "cw",
+                "sensor_check" : "left"
+            },
+        }
 
 STANDBY_LOCATION = "LM4"
