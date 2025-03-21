@@ -36,12 +36,13 @@ HEIGHT_BUFFER = 56
 
 LINE_CONFIG = {
             ("line 25", "loader", 1): {
-                "line_height": 30,
+                "line_height": 60,
                 "buffer_action": "flip",
                 "buffer_turn": "clockwise",
                 "stopper_action" : "cw",
                 "conveyor_direction" : "ccw",
-                "sensor_check" : "right"
+                "sensor_check" : "right",
+                "address" : "192.168.1.27"
             },
             ("line 25", "loader", 2): {
                 "line_height": 770,
@@ -49,7 +50,8 @@ LINE_CONFIG = {
                 "buffer_turn": "clockwise",
                 "stopper_action" : "cw",
                 "conveyor_direction" : "cw",
-                "sensor_check" : "left"
+                "sensor_check" : "left",
+                "address" : "192.168.1.27"
             },
             ("line 25", "unloader", 1): {
                 "line_height": 10,
@@ -57,7 +59,8 @@ LINE_CONFIG = {
                 "buffer_turn": "clockwise",
                 "stopper_action" : "ccw",
                 "conveyor_direction" : "ccw",
-                "sensor_check" : "right"
+                "sensor_check" : "right",
+                "address" : "192.168.1.28"
             },
             ("line 25", "unloader", 2): {
                 "line_height": 720,
@@ -65,7 +68,8 @@ LINE_CONFIG = {
                 "buffer_turn": "clockwise",
                 "stopper_action" : "ccw",
                 "conveyor_direction" : "cw",
-                "sensor_check" : "left"
+                "sensor_check" : "left",
+                "address" : "192.168.1.28"
             },
         }
 
