@@ -15,6 +15,7 @@ from config import (
     MAP_LINE,
     HEIGHT_BUFFER,
     STANDBY_LOCATION,
+    LINE_CONFIG,
 )
 from mongodb import BufferDatabase
 from socket_server import SocketServer
@@ -350,7 +351,11 @@ class ProccessHandler:
         try:
             # Tìm máy để nhận magazine
             if target_ip:
-                messsage = {"line": line, "floor": infor_floor, "machine_type": machine_type}
+                messsage = {
+                    "line": line,
+                    "floor": infor_floor,
+                    "machine_type": machine_type,
+                }
                 json_message = json.dumps(messsage)
                 socket_server.broadcast_message(json_message, target_ip)
                 print(f"Đã gửi thông tin muốn nhận magazine tới máy {target_ip}")
@@ -364,72 +369,63 @@ class ProccessHandler:
             )
             raise
 
-    def process_handle_tranfer_goods(
-        self, floor, direction, location, type, line, machine_type
-    ):
+    def process_handle_tranfer_goods(self, location, line, machine_type, floor, type):
         """
         Hàm này xử lý quá trình chuyển hàng giữa robot và máy
         """
         try:
-            # Điều khiển độ cao băng tải
-            height = self.line_configs.get((line, machine_type, floor), {}).get("height")
+            self.control_robot_to_location(location)
+            print(f"Robot dang di chuyen toi {location}")
+            while not self.check_location_robot(location):
+                print(f"Robot chua hoan thanh di chuyen toi {location}")
+                time.sleep(6)
+            height = LINE_CONFIG.get((line, machine_type, floor), {}).get("line_height")
             self.control_folk_conveyor(height)
-            print("Robot điều khiển độ cao băng tải")
-
-            # Kiểm tra xem băng tải đã được nâng tới đúng tầng chưa
             while not self.check_lift_conveyor(height):
-                print("Robot chưa đạt độ cao băng tải")
-                asyncio.sleep(6)
-
-            # Robot mở stopper
-            self.control_robot_stopper(direction, "open")
-
-            # Kiểm tra robot đã mở stopper chưa
-            while not self.check_stopper_robot(direction, "open"):
-                print("Stopper chưa mở")
-                asyncio.sleep(6)
-
-            # Gửi thông tin đến máy
-            # self.request_get_magazine(location, line, floor, machine_type)
-
-            # Robot quay băng tải
+                print("Robot chua dat do cao bang tai")
+            stopper_action = LINE_CONFIG.get((line, machine_type, floor), {}).get(
+                "stopper_action"
+            )
+            self.control_robot_stopper(stopper_action, "open")
+            while not self.check_stopper_robot(stopper_action, "open"):
+                print("Stopper chua dung trang thai")
+                # time.sleep(3)
+            direction = LINE_CONFIG.get((line, machine_type, floor), {}).get(
+                "conveyor_direction"
+            )
             self.control_robot_conveyor(direction)
-            print("Robot quay băng tải để chuyển hàng với máy")
-
-            # Kiểm tra robot đã quay băng tải chưa
             while not self.check_conveyor_robot(direction):
-                print("Robot chưa hoàn thành điểu khiển quay băng tải")
-                asyncio.sleep(2)
-
-            if type == "pick_up":
-                # Kiểm tra xem robot đã nhận magazine từ máy
-                while not self.check_sensor_left_robot():
-                    print("Robot chưa nhận magazine từ máy!!!")
-                    asyncio.sleep(3)
-                print("Robot đã nhận magazine từ máy!!!")
-                self.send_message_to_call(location, line, 0, machine_type)
-            elif type == "drop_off":
-                # Kiểm tra xem máy đã nhận magazine
-                i = floor - 1
-                data_check = ""
-                while data_check["floor"][i] != 0:
-                    print("Máy chưa nhận xong magazine!!!")
-                    data_check = self.get_data_from_socket_server()
-            # Robot đóng stopper
-            self.control_robot_stopper(direction, "close")
-
-            # Kiểm tra robot đã đóng stopper chưa
-            while not self.check_stopper_robot(direction, "close"):
-                print("Stopper chưa đóng")
-                asyncio.sleep(6)
-
-            # Robot dừng băng tải
+                print("Chua hoan thanh dieu khien bang tai")
+            target_ip = LINE_CONFIG.get((line, machine_type, floor), {}).get("address")
+            # print("Target ID: ", target_ip)
+            target = socket_server.get_client_socket_by_ip(target_ip)
+            # print("Target: ", target)
+            self.send_message_to_call(target, line, machine_type, floor)
+            sensor_check = LINE_CONFIG.get((line, machine_type, floor), {}).get(
+                "sensor_check"
+            )
+            if type == "pickup":
+                if sensor_check == "right":
+                    while not self.check_sensor_right_robot():
+                        print("Chua hoan thanh nhan hang")
+                        time.sleep(1)
+                elif sensor_check == "left":
+                    while not self.check_sensor_left_robot():
+                        print("Chua hoan thanh nhan hang")
+                        time.sleep(1)
+            if type == "destination":
+                while self.check_sensor_right_robot() or self.check_sensor_left_robot():
+                    print("Chua hoan thanh tra hang")
+                    time.sleep(15)
             self.control_robot_conveyor("stop")
-
-            # Kiểm tra robot đã dừng băng tải chưa
             while not self.check_conveyor_robot("stop"):
-                print("Robot chưa hoàn thành điểu khiển dừng băng tải")
-                asyncio.sleep(20)
+                print("Chua hoan thanh dieu khien bang tai")
+                # time.sleep(6)
+            self.control_robot_stopper(stopper_action, "close")
+            while not self.check_stopper_robot(stopper_action, "close"):
+                print("Stopper chua dung trang thai")
+                # time.sleep(3)
+            self.send_message_to_call(target, line, machine_type, 0)
 
         except Exception as e:
             logging.error(
@@ -485,7 +481,9 @@ class ProccessHandler:
                     print("Buffer chua san sang")
 
                 # Gửi nhiệm vụ theo yêu cầu cho Buffer
-                action = self.line_configs.get((line, machine_type, floor), {}).get("action")
+                action = self.line_configs.get((line, machine_type, floor), {}).get(
+                    "action"
+                )
                 buffer_action(action)
                 # asyncio.sleep(3)
 

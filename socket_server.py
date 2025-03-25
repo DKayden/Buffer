@@ -7,7 +7,9 @@ from config import SOCKET_HOST, SOCKET_PORT, MAP_ADDRESS
 
 
 class SocketServer:
-    def __init__(self, host: str = SOCKET_HOST, port: int = SOCKET_PORT, max_workers: int = 10):
+    def __init__(
+        self, host: str = SOCKET_HOST, port: int = SOCKET_PORT, max_workers: int = 10
+    ):
         self.host = host
         self.port = port
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,7 +52,7 @@ class SocketServer:
         try:
             location_data = client_socket.recv(1024).decode("utf-8")
             self.client_info[client_socket] = {"location": location_data}
-            
+
             while True:
                 data = client_socket.recv(1024)
                 if not data:
@@ -59,11 +61,9 @@ class SocketServer:
                 processed_data = json.loads(data.decode("utf-8"))
 
                 with self._lock:
-                    dict_value = {
-                        address[0]: processed_data
-                    }
+                    dict_value = {address[0]: processed_data}
                     self.receive_dict_value.update(dict_value)
-                    # print(f"Đã nhận dữ liệu {self.receive_dict_value}")
+                    print(f"Đã nhận dữ liệu {self.receive_dict_value}")
 
                     client1_data, client2_data = None, None
                     for pair in MAP_ADDRESS:
@@ -75,13 +75,20 @@ class SocketServer:
                     if client1_data and client2_data:
                         if "floor" in client1_data and "floor" in client2_data:
                             for i in range(len(client1_data["floor"])):
-                                if (client1_data["floor"][i] == client2_data["floor"][i] and
-                                    client1_data["floor"][i] != 0 and client2_data["floor"][i] != 0):
-                                    machine_type = "loader" if client1_data["floor"][i] == 1 else "unloader"
+                                if (
+                                    client1_data["floor"][i] == client2_data["floor"][i]
+                                    and client1_data["floor"][i] != 0
+                                    and client2_data["floor"][i] != 0
+                                ):
+                                    machine_type = (
+                                        "loader"
+                                        if client1_data["floor"][i] == 1
+                                        else "unloader"
+                                    )
                                     mission_item = {
                                         "floor": client1_data["floor"][i],
                                         "line": client1_data["line"],
-                                        "machine_type": machine_type
+                                        "machine_type": machine_type,
                                     }
                                     self.mission_data.update(mission_item)
                     # print(f"Mission: {self.mission_data}")
