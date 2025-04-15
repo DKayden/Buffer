@@ -52,7 +52,7 @@ async def receivemagazine(type: str):
         return {"message": "AMR xác nhận đã hoàn thành lấy."}
 
 
-@app.post("turn")
+@app.post("/turn")
 async def turn(direction: str):
     if direction == "clockwise":
         modbus_client.write_register(TURN_ADDRESS, 0)

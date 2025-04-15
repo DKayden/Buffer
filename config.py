@@ -45,7 +45,7 @@ LINE_CONFIG = {
     ("line 25", "loader", 2): {
         "line_height": 770,
         "buffer_action": "circular",
-        "buffer_turn": "clockwise",
+        "buffer_turn": "counterclockwise",
         "stopper_action": "cw",
         "conveyor_direction": "cw",
         "sensor_check": "left",
@@ -63,7 +63,7 @@ LINE_CONFIG = {
     ("line 25", "unloader", 2): {
         "line_height": 720,
         "buffer_action": "circular",
-        "buffer_turn": "counterclockwise",
+        "buffer_turn": "clockwise",
         "stopper_action": "ccw",
         "conveyor_direction": "cw",
         "sensor_check": "left",
@@ -72,3 +72,4 @@ LINE_CONFIG = {
 }
 
 STANDBY_LOCATION = "LM4"
+CHARGE_LOCATION = "LM21"

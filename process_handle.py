@@ -236,6 +236,43 @@ class ProccessHandler:
     def check_sensor_right_robot(self):
         return self.get_information_sensor_robot()[5] == 0
 
+    def control_led(self, color):
+        """
+        Hàm này điều khiển led của robot.
+        """
+        try:
+            response = requests.post(
+                f"{self.robot_url}/color",
+                json={
+                    "color": color,
+                },
+            )
+            if response.status_code != 200:
+                raise requests.exceptions.RequestException(
+                    f"Lỗi đường truyền khi điều khiển led của robot. Mã trạng thái: {response.status_code}"
+                )
+            print("Led của robot đã được điều khiển thành công")
+        except requests.exceptions.RequestException as e:
+            print(f"Lỗi trong quá trình điều khiển led của robot: {str(e)}")
+            raise requests.exceptions.RequestException(
+                "Thất bại khi điều khiển led của robot"
+            ) from e
+
+    def get_data_status_robot(self):
+        try:
+            response = requests.get(f"{self.robot_url}/status")
+            if response.status_code != 200:
+                raise requests.exceptions.RequestException(
+                    "Lỗi đường truyền khi kiểm tra status của robot"
+                )
+            data = response.json()
+            return data
+        except requests.exceptions.RequestException as e:
+            print(f"Lỗi trong quá trình kiểm tra status: {str(e)}")
+            raise requests.exceptions.RequestException(
+                "Thất bại trong kiểm tra status của robot"
+            ) from e
+
     def get_data_from_socket_server(self):
         """
         Hàm này lấy thông tin dữ liệu từ socket server
@@ -328,11 +365,6 @@ class ProccessHandler:
     def create_mission(self, data):
         """Hàm này lấy thông tin nhiệm vụ từ socket server và thêm vào danh sách nhiệm vụ."""
         try:
-            # data = socket_server.get_mission_data()
-            # while not data:
-            #     print("Data mission is Empty")
-            #     data = socket_server.get_mission_data()
-            #     time.sleep(3)
             line = data.get("line")
             floor = data.get("floor")
             machine_type = data.get("machine_type")

@@ -3,7 +3,13 @@ from socket_server import SocketServer
 import time
 import threading
 import json
-from config import HEIGHT_BUFFER, BUFFER_LOCATION, LINE_CONFIG, STANDBY_LOCATION
+from config import (
+    HEIGHT_BUFFER,
+    BUFFER_LOCATION,
+    LINE_CONFIG,
+    STANDBY_LOCATION,
+    CHARGE_LOCATION,
+)
 from process_handle import ProccessHandler
 import buffer
 
@@ -15,6 +21,7 @@ process_handler = ProccessHandler()
 def handle_tranfer_magazine(location, line, machine_type, floor, type):
     process_handler.control_robot_to_location(location)
     print(f"Robot dang di chuyen toi {location}")
+    process_handler.control_led("green")
     while not process_handler.check_location_robot(location):
         print(f"Robot chua hoan thanh di chuyen toi {location}")
         time.sleep(6)
@@ -39,7 +46,7 @@ def handle_tranfer_magazine(location, line, machine_type, floor, type):
     # print("Target ID: ", target_ip)
     target = socket_server.get_client_socket_by_ip(target_ip)
     # print("Target: ", target)
-    process_handler.send_message_to_call(target, line, machine_type, floor)
+    # process_handler.send_message_to_call(target, line, machine_type, floor)
     sensor_check = LINE_CONFIG.get((line, machine_type, floor), {}).get("sensor_check")
     if type == "pickup":
         if sensor_check == "right":
@@ -66,7 +73,8 @@ def handle_tranfer_magazine(location, line, machine_type, floor, type):
     while not process_handler.check_stopper_robot(stopper_action, "close"):
         print("Stopper chua dung trang thai")
         # time.sleep(3)
-    process_handler.send_message_to_call(target, line, machine_type, 0)
+    process_handler.control_folk_conveyor(50)
+    # process_handler.send_message_to_call(target, line, machine_type, 0)
 
 
 def handle_mission_creation():
@@ -95,6 +103,10 @@ def monitor_data():
         # for mission in list_mission:
         try:
             if process_handler.mission:
+                # data = {"line" : "line 25", "floor" : 1, "machine_type" : "loader"}
+                # process_handler.create_mission(data)
+                # list_mission = process_handler.mission
+                # for mission in list_mission:
                 print(f"Danh sach nhiem vu: {process_handler.mission}")
                 mission = process_handler.mission[0]
                 pick_up = mission["pick_up"]
@@ -124,6 +136,11 @@ def monitor_data():
                     # time.sleep(3)
                 while not buffer.buffer_allow_action():
                     print("Buffer chua san sang")
+                buffer_route = LINE_CONFIG.get((line, destination_type, floor), {}).get(
+                    "buffer_turn"
+                )
+                # print("Buffer route: ", buffer_route)
+                buffer.buffer_turn(buffer_route)
                 buffer_action = LINE_CONFIG.get(
                     (line, destination_type, floor), {}
                 ).get("buffer_action")
@@ -147,7 +164,7 @@ def monitor_data():
                 buffer.robot_wanna_receive_magazine()
                 while not process_handler.check_sensor_left_robot():
                     print("Chua hoan thanh nhan hang")
-                    time.sleep(1)
+                    # time.sleep(1)
                 process_handler.control_robot_conveyor("stop")
                 while not process_handler.check_conveyor_robot("stop"):
                     print("Robot chua hoan thanh dieu khien bang tai")
@@ -160,15 +177,12 @@ def monitor_data():
                 handle_tranfer_magazine(
                     destination, line, destination_type, floor, "destination"
                 )
-                # print(f"Danh sach nhiem vu truoc khi pop: {process_handler.mission}")
                 process_handler.mission.pop(0)
-                # print(f"Danh sach nhiem vu sau khi pop: {process_handler.mission}")
-                # print(f"Da hoan thanh nhiem vu {mission}")
-                process_handler.control_folk_conveyor(50)
-                process_handler.control_robot_to_location(STANDBY_LOCATION)
-                while not process_handler.check_location_robot(STANDBY_LOCATION):
-                    print("Chua hoan thanh ve standby")
-                time.sleep(1)
+                if not process_handler.mission:
+                    process_handler.control_robot_to_location(STANDBY_LOCATION)
+                    process_handler.control_folk_conveyor(50)
+                    process_handler.control_led("yellow")
+            time.sleep(1)
         except Exception as e:
             print(f"Lỗi trong quá trình thực thi nhiệm vụ: {str(e)}")
 
@@ -176,6 +190,9 @@ def monitor_data():
 if __name__ == "__main__":
     # Khởi tạo server
     server = socket_server
+
+    # status = process_handler.get_data_status_robot()["battery_level"]
+    # print("Battery level: ", status)
 
     mission_create_thread = threading.Thread(target=handle_mission_creation, args=())
 
