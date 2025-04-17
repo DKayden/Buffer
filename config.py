@@ -104,10 +104,10 @@ LINE_CONFIG = {
     ("line 26", "unloader", 2): {
         "line_height": 720,
         "buffer_action": "circular",
-        "buffer_turn": "counterclockwise",
-        "stopper_action": "ccw",
-        "conveyor_direction": "cw",
-        "sensor_check": "left",
+        "buffer_turn": "clockwise",
+        "stopper_action": "cw",
+        "conveyor_direction": "ccw",
+        "sensor_check": "right",
         "address": "192.168.1.30",
     },
     ("line 27", "loader", 1): {
@@ -158,7 +158,7 @@ LINE_CONFIG = {
     ("line 28", "loader", 2): {
         "line_height": 770,
         "buffer_action": "circular",
-        "buffer_turn": "counterclockwise",
+        "buffer_turn": "lockwise",
         "stopper_action": "cw",
         "conveyor_direction": "cw",
         "sensor_check": "left",
@@ -167,7 +167,7 @@ LINE_CONFIG = {
     ("line 28", "unloader", 1): {
         "line_height": 10,
         "buffer_action": "flip",
-        "buffer_turn": "clockwise",
+        "buffer_turn": "counterclockwise",
         "stopper_action": "ccw",
         "conveyor_direction": "ccw",
         "sensor_check": "right",
@@ -177,9 +177,9 @@ LINE_CONFIG = {
         "line_height": 720,
         "buffer_action": "circular",
         "buffer_turn": "clockwise",
-        "stopper_action": "ccw",
-        "conveyor_direction": "cw",
-        "sensor_check": "left",
+        "stopper_action": "cw",
+        "conveyor_direction": "ccw",
+        "sensor_check": "right",
         "address": "192.168.1.34",
     },
 }
