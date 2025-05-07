@@ -17,7 +17,7 @@ MODBUS_TYPE = "rtu"
 BUFFER_HOST = "localhost"
 BUFFER_PORT = 5000
 
-BUFFER_LOCATION = "LM3"
+BUFFER_LOCATION = "LM200"
 BUFFER_ACTION = "flip"
 
 SOCKET_HOST = "192.168.1.100"
@@ -29,10 +29,10 @@ CALL_PORT = 5000
 MAP_ADDRESS = [["192.168.1.27", "192.168.1.28"]]
 
 MAP_LINE = {
-    "line 25": ["LM31", "LM29"],
-    "line 26": ["LM41", "LM46"],
-    "line 27": ["LM42", "LM49"],
-    "line 28": ["LM43", "LM48"],
+    "line 25": ["LM252", "LM251"],
+    "line 26": ["LM262", "LM261"],
+    "line 27": ["LM272", "LM271"],
+    "line 28": ["LM282", "LM281"],
 }
 
 HEIGHT_BUFFER = 56
@@ -184,5 +184,5 @@ LINE_CONFIG = {
     },
 }
 
-STANDBY_LOCATION = "LM4"
-CHARGE_LOCATION = "LM21"
+STANDBY_LOCATION = "LM100"
+CHARGE_LOCATION = "LM10"

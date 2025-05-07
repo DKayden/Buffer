@@ -30,7 +30,7 @@ class TimeoutError(Exception):
     pass
 
 
-def wait_for_condition(condition_func, timeout=60, interval=1, error_message=""):
+def wait_for_condition(condition_func, timeout=600, interval=1, error_message=""):
     """
     Chờ điều kiện được thỏa mãn với timeout
 
