@@ -168,9 +168,9 @@ LINE_CONFIG = {
         "line_height": 10,
         "buffer_action": "flip",
         "buffer_turn": "counterclockwise",
-        "stopper_action": "ccw",
-        "conveyor_direction": "ccw",
-        "sensor_check": "right",
+        "stopper_action": "cw",
+        "conveyor_direction": "cw",
+        "sensor_check": "left",
         "address": "192.168.1.34",
     },
     ("line 28", "unloader", 2): {
