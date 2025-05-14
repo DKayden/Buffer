@@ -63,7 +63,11 @@ class SocketServer:
                 with self._lock:
                     dict_value = {address[0]: processed_data}
                     self.receive_dict_value.update(dict_value)
+                    # json_receive_divt_value = json.dumps(self.receive_dict_value, ensure_ascii=False, indent=4)
                     print(f"Đã nhận dữ liệu {self.receive_dict_value}")
+                    print(
+                        "______________________________________________________________________________________________________________________________________________"
+                    )
 
                     client1_data, client2_data = None, None
                     for pair in MAP_ADDRESS:
@@ -156,7 +160,9 @@ class SocketServer:
                 # Gửi tin nhắn đến một client cụ thể
                 try:
                     target_socket.send(encoded_message)
-                    print(f"Đã gửi tin nhắn đến client cụ thể: {message}")
+                    print(
+                        f"Đã gửi tin nhắn đến {target_socket.getpeername()[0]}: {message}"
+                    )
                 except Exception as e:
                     print(f"Lỗi khi gửi tin nhắn đến client cụ thể: {e}")
             else:

@@ -390,7 +390,9 @@ class ProccessHandler:
                 }
                 json_message = json.dumps(messsage)
                 socket_server.broadcast_message(json_message, target_ip)
-                print(f"Đã gửi thông tin muốn nhận magazine tới máy {target_ip}")
+                print(
+                    f"Đã gửi thông tin muốn nhận magazine tới máy {target_ip.getpeername()[0]}"
+                )
             else:
                 raise ValueError(
                     f"Không tìm thấy máy để nhận magazine tại vị trí {target_ip}"
