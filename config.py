@@ -26,7 +26,12 @@ SOCKET_PORT = 5000
 CALL_HOST = "0.0.0.0"
 CALL_PORT = 5000
 
-MAP_ADDRESS = [["192.168.1.27", "192.168.1.28"]]
+MAP_ADDRESS = [
+    ["192.168.1.27", "192.168.1.28"],
+    ["192.168.1.29", "192.168.1.30"],
+    ["192.168.1.31", "192.168.1.32"],
+    ["192.168.1.33", "192.168.1.34"],
+]
 
 MAP_LINE = {
     "line 25": ["LM252", "LM251"],
@@ -75,7 +80,7 @@ LINE_CONFIG = {
         "address": "192.168.1.28",
     },
     ("line 26", "loader", 1): {
-        "line_height": 60,
+        "line_height": 40,
         "buffer_action": "flip",
         "buffer_turn": "clockwise",
         "stopper_action": "cw",
@@ -84,7 +89,7 @@ LINE_CONFIG = {
         "address": "192.168.1.29",
     },
     ("line 26", "loader", 2): {
-        "line_height": 770,
+        "line_height": 750,
         "buffer_action": "circular",
         "buffer_turn": "clockwise",
         "stopper_action": "cw",
@@ -93,7 +98,7 @@ LINE_CONFIG = {
         "address": "192.168.1.29",
     },
     ("line 26", "unloader", 1): {
-        "line_height": 10,
+        "line_height": 45,
         "buffer_action": "flip",
         "buffer_turn": "counterclockwise",
         "stopper_action": "cw",
@@ -102,7 +107,7 @@ LINE_CONFIG = {
         "address": "192.168.1.30",
     },
     ("line 26", "unloader", 2): {
-        "line_height": 720,
+        "line_height": 745,
         "buffer_action": "circular",
         "buffer_turn": "clockwise",
         "stopper_action": "cw",
@@ -111,7 +116,7 @@ LINE_CONFIG = {
         "address": "192.168.1.30",
     },
     ("line 27", "loader", 1): {
-        "line_height": 60,
+        "line_height": 40,
         "buffer_action": "flip",
         "buffer_turn": "clockwise",
         "stopper_action": "cw",
@@ -120,7 +125,7 @@ LINE_CONFIG = {
         "address": "192.168.1.31",
     },
     ("line 27", "loader", 2): {
-        "line_height": 770,
+        "line_height": 750,
         "buffer_action": "circular",
         "buffer_turn": "counterclockwise",
         "stopper_action": "cw",
@@ -129,7 +134,7 @@ LINE_CONFIG = {
         "address": "192.168.1.31",
     },
     ("line 27", "unloader", 1): {
-        "line_height": 10,
+        "line_height": 30,
         "buffer_action": "flip",
         "buffer_turn": "clockwise",
         "stopper_action": "ccw",
@@ -138,7 +143,7 @@ LINE_CONFIG = {
         "address": "192.168.1.32",
     },
     ("line 27", "unloader", 2): {
-        "line_height": 720,
+        "line_height": 745,
         "buffer_action": "circular",
         "buffer_turn": "clockwise",
         "stopper_action": "ccw",
@@ -147,7 +152,7 @@ LINE_CONFIG = {
         "address": "192.168.1.32",
     },
     ("line 28", "loader", 1): {
-        "line_height": 60,
+        "line_height": 40,
         "buffer_action": "flip",
         "buffer_turn": "clockwise",
         "stopper_action": "cw",
@@ -156,7 +161,7 @@ LINE_CONFIG = {
         "address": "192.168.1.33",
     },
     ("line 28", "loader", 2): {
-        "line_height": 770,
+        "line_height": 750,
         "buffer_action": "circular",
         "buffer_turn": "lockwise",
         "stopper_action": "cw",
@@ -165,7 +170,7 @@ LINE_CONFIG = {
         "address": "192.168.1.33",
     },
     ("line 28", "unloader", 1): {
-        "line_height": 10,
+        "line_height": 45,
         "buffer_action": "flip",
         "buffer_turn": "counterclockwise",
         "stopper_action": "cw",
@@ -174,7 +179,7 @@ LINE_CONFIG = {
         "address": "192.168.1.34",
     },
     ("line 28", "unloader", 2): {
-        "line_height": 720,
+        "line_height": 745,
         "buffer_action": "circular",
         "buffer_turn": "clockwise",
         "stopper_action": "cw",
