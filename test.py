@@ -64,6 +64,7 @@ def handle_robot_movement(location, error_message=""):
         )
     except Exception as e:
         logging.error(f"Lỗi khi di chuyển robot tới {location}: {str(e)}")
+        process_handler.control_robot_to_location(location)
         raise
 
 
@@ -153,6 +154,7 @@ def handle_tranfer_magazine(location, line, machine_type, floor, type):
         type: Loại thao tác
     """
     try:
+        process_handler.control_led("green")
         handle_robot_movement(
             location, f"Robot chưa hoàn thành di chuyển tới {location}"
         )
@@ -160,7 +162,11 @@ def handle_tranfer_magazine(location, line, machine_type, floor, type):
 
         target_ip = LINE_CONFIG.get((line, machine_type, floor), {}).get("address")
         target = socket_server.get_client_socket_by_ip(target_ip)
-        process_handler.send_message_to_call(target, line, machine_type, floor)
+        count = 5
+        while count >= 0:
+            process_handler.send_message_to_call(target, line, machine_type, floor)
+            count = count - 1
+            time.sleep(1)
 
         sensor_check = LINE_CONFIG.get((line, machine_type, floor), {}).get(
             "sensor_check"
@@ -209,6 +215,15 @@ def monitor_data():
             if process_handler.mission:
                 logging.info(f"Danh sách nhiệm vụ: {process_handler.mission}")
                 mission = process_handler.mission[0]
+
+                # if True:
+                #     mission = {
+                #     "pick_up": "LM282",
+                #     "destination": "LM281",
+                #     "floor": 2,
+                #     "line": "line 28",
+                #     "machine_type": "unloader",
+                #     }
 
                 pick_up = mission["pick_up"]
                 destination = mission["destination"]
@@ -300,6 +315,7 @@ def monitor_data():
                 )
 
                 process_handler.mission.pop(0)
+                logging.info(f"Mission remainning: {process_handler.mission}")
                 if not process_handler.mission:
                     handle_robot_movement(
                         STANDBY_LOCATION,
@@ -311,6 +327,15 @@ def monitor_data():
             time.sleep(1)
         except Exception as e:
             logging.error(f"Lỗi trong quá trình thực thi nhiệm vụ: {str(e)}")
+
+
+def check_send_message():
+    while not stop_threads:
+        target_ip = LINE_CONFIG.get(("line 28", "unloader", 1), {}).get("address")
+        target = socket_server.get_client_socket_by_ip(target_ip)
+        if target:
+            process_handler.send_message_to_call(target, "line 28", "unloader", 1)
+        time.sleep(5)
 
 
 if __name__ == "__main__":
@@ -326,6 +351,10 @@ if __name__ == "__main__":
 
         mission_create_thread.start()
         monitor_thread.start()
+
+        send_check_thread = threading.Thread(target=check_send_message)
+        send_check_thread.daemon = True
+        # send_check_thread.start()
 
         server.start()
 

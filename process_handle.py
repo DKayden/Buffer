@@ -391,15 +391,16 @@ class ProccessHandler:
                 json_message = json.dumps(messsage)
                 socket_server.broadcast_message(json_message, target_ip)
                 print(f"Đã gửi thông tin tới máy {target_ip.getpeername()[0]}")
-            else:
-                raise ValueError(
-                    f"Không tìm thấy máy để nhận magazine tại vị trí {target_ip}"
-                )
+            # else:
+            #     raise ValueError(
+            #         f"Không tìm thấy máy để nhận magazine tại vị trí {target_ip}"
+            #     )
         except Exception as e:
             logging.error(
                 f"Lỗi trong quá trình gửi thông tin muốn nhận magazine: {str(e)}"
             )
-            raise
+            self.send_message_to_call(target_ip, line, machine_type, infor_floor)
+            # raise
 
     def process_handle_tranfer_goods(self, location, line, machine_type, floor, type):
         """
