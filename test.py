@@ -216,15 +216,6 @@ def monitor_data():
                 logging.info(f"Danh sách nhiệm vụ: {process_handler.mission}")
                 mission = process_handler.mission[0]
 
-                # if True:
-                #     mission = {
-                #     "pick_up": "LM282",
-                #     "destination": "LM281",
-                #     "floor": 2,
-                #     "line": "line 28",
-                #     "machine_type": "unloader",
-                #     }
-
                 pick_up = mission["pick_up"]
                 destination = mission["destination"]
                 floor = mission["floor"]
@@ -333,6 +324,7 @@ def check_send_message():
     while not stop_threads:
         target_ip = LINE_CONFIG.get(("line 28", "unloader", 1), {}).get("address")
         target = socket_server.get_client_socket_by_ip(target_ip)
+        # print(f"TARGET: {target}")
         if target:
             process_handler.send_message_to_call(target, "line 28", "unloader", 1)
         time.sleep(5)

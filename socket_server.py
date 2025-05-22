@@ -128,7 +128,7 @@ class SocketServer:
         """Xóa dữ liệu đầu tiên"""
         with self._lock:
             if self.mission_data:
-                return self.mission_data.pop(0)
+                return self.mission_data.pop()
             return None
 
     def stop(self):
