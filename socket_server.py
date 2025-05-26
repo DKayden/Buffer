@@ -61,41 +61,46 @@ class SocketServer:
                 processed_data = json.loads(data.decode("utf-8"))
 
                 with self._lock:
-                    dict_value = {address[0]: processed_data}
-                    self.receive_dict_value.update(dict_value)
-                    # json_receive_divt_value = json.dumps(self.receive_dict_value, ensure_ascii=False, indent=4)
+                    # Cập nhật dữ liệu client vào dict
+                    self.receive_dict_value[address[0]] = processed_data
                     print(f"Đã nhận dữ liệu {self.receive_dict_value}")
-                    print(
-                        "______________________________________________________________________________________________________________________________________________"
-                    )
+                    print("_" * 150)
 
-                    client1_data, client2_data = None, None
-                    for pair in MAP_ADDRESS:
-                        for key, value in self.receive_dict_value.items():
-                            if key == pair[0]:
-                                client1_data = value
-                            elif key == pair[1]:
-                                client2_data = value
-                    if client1_data and client2_data:
-                        if "floor" in client1_data and "floor" in client2_data:
-                            for i in range(len(client1_data["floor"])):
-                                if (
-                                    client1_data["floor"][i] == client2_data["floor"][i]
-                                    and client1_data["floor"][i] != 0
-                                    and client2_data["floor"][i] != 0
-                                ):
-                                    machine_type = (
-                                        "loader"
-                                        if client1_data["floor"][i] == 1
-                                        else "unloader"
-                                    )
-                                    mission_item = {
-                                        "floor": client1_data["floor"][i],
-                                        "line": client1_data["line"],
-                                        "machine_type": machine_type,
-                                    }
+                    # Kiểm tra các cặp MAP_ADDRESS
+                    for ip1, ip2 in MAP_ADDRESS:
+                        client1_data = self.receive_dict_value.get(ip1)
+                        client2_data = self.receive_dict_value.get(ip2)
+
+                        if not (client1_data and client2_data):
+                            continue
+
+                        floors1 = client1_data.get("floor")
+                        floors2 = client2_data.get("floor")
+                        lines1 = client1_data.get("line")
+
+                        if not (floors1 and floors2 and lines1) or len(floors1) != len(
+                            floors2
+                        ):
+                            continue
+
+                        for floor_index, (f1, f2) in enumerate(zip(floors1, floors2)):
+                            if f1 == f2 and f1 != 0:
+                                machine_type = "loader" if f1 == 1 else "unloader"
+                                mission_item = {
+                                    "floor": f1,
+                                    "line": lines1,
+                                    "machine_type": machine_type,
+                                }
+
+                                # Tránh cập nhật trùng nếu đã có (tùy vào yêu cầu bạn)
+                                mission_key = (f1, tuple(lines1), machine_type)
+                                if not hasattr(self, "mission_history"):
+                                    self.mission_history = set()
+
+                                if mission_key not in self.mission_history:
                                     self.mission_data.update(mission_item)
-                    # print(f"Mission: {self.mission_data}")
+                                    self.mission_history.add(mission_key)
+                                    print(f"Mission được tạo: {mission_item}")
 
         except Exception as e:
             print(f"Lỗi khi xử lý client {address}: {e}")

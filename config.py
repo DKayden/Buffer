@@ -134,7 +134,7 @@ LINE_CONFIG = {
         "address": "192.168.1.31",
     },
     ("line 27", "unloader", 1): {
-        "line_height": 30,
+        "line_height": 20,
         "buffer_action": "flip",
         "buffer_turn": "clockwise",
         "stopper_action": "ccw",
@@ -143,7 +143,7 @@ LINE_CONFIG = {
         "address": "192.168.1.32",
     },
     ("line 27", "unloader", 2): {
-        "line_height": 745,
+        "line_height": 720,
         "buffer_action": "circular",
         "buffer_turn": "clockwise",
         "stopper_action": "ccw",
