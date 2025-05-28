@@ -193,7 +193,7 @@ def handle_tranfer_magazine(location, line, machine_type, floor, type):
 
     except Exception as e:
         logging.error(f"Lỗi trong quá trình chuyển magazine: {str(e)}")
-        raise
+        handle_tranfer_magazine(location, line, machine_type, floor, type)
 
 
 def handle_mission_creation():
@@ -201,8 +201,8 @@ def handle_mission_creation():
     while not stop_threads:
         try:
             mission_data = socket_server.get_mission_data()
-            if mission_data:
-                process_handler.create_mission(mission_data)
+            for mission in mission_data:
+                process_handler.create_mission(mission)
             time.sleep(1)
         except Exception as e:
             logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
@@ -215,6 +215,15 @@ def monitor_data():
             if process_handler.mission:
                 logging.info(f"Danh sách nhiệm vụ: {process_handler.mission}")
                 mission = process_handler.mission[0]
+
+                # if True:
+                #     mission = {
+                #         "pick_up" : "LM282",
+                #         "destination" : "LM281",
+                #         "floor" : 2,
+                #         "line" : "line 28",
+                #         "machine_type" : "unloader"
+                #     }
 
                 pick_up = mission["pick_up"]
                 destination = mission["destination"]
@@ -322,11 +331,11 @@ def monitor_data():
 
 def check_send_message():
     while not stop_threads:
-        target_ip = LINE_CONFIG.get(("line 28", "unloader", 1), {}).get("address")
+        target_ip = LINE_CONFIG.get(("line 25", "loader", 1), {}).get("address")
         target = socket_server.get_client_socket_by_ip(target_ip)
         # print(f"TARGET: {target}")
         if target:
-            process_handler.send_message_to_call(target, "line 28", "unloader", 1)
+            process_handler.send_message_to_call(target, "line 25", "loader", 1)
         time.sleep(5)
 
 

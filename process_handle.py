@@ -370,6 +370,7 @@ class ProccessHandler:
             machine_type = data.get("machine_type")
 
             self._create_mission_from_data(line, machine_type, floor)
+            socket_server.remove_first_mission()
 
         except Exception as e:
             logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")

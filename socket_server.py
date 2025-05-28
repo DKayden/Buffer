@@ -14,12 +14,17 @@ class SocketServer:
         self.port = port
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
         self.client_info = {}
         self.clients: List[socket.socket] = []
-        self.received_data: List[Any] = []  # Danh sách lưu trữ dữ liệu
+        self.received_data: List[Any] = []
         self.receive_dict_value = {}
-        self.mission_data = {}
-        self._lock = threading.Lock()  # Lock để đồng bộ hóa truy cập vào received_data
+
+        self._lock = threading.Lock()
+        self.mission_lock = threading.Lock()
+        self.mission_history = set()
+        self.mission_data = {"missions": []}
+
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
 
     def start(self):
@@ -61,12 +66,8 @@ class SocketServer:
                 processed_data = json.loads(data.decode("utf-8"))
 
                 with self._lock:
-                    # Cập nhật dữ liệu client vào dict
                     self.receive_dict_value[address[0]] = processed_data
-                    print(f"Đã nhận dữ liệu {self.receive_dict_value}")
-                    print("_" * 150)
 
-                    # Kiểm tra các cặp MAP_ADDRESS
                     for ip1, ip2 in MAP_ADDRESS:
                         client1_data = self.receive_dict_value.get(ip1)
                         client2_data = self.receive_dict_value.get(ip2)
@@ -86,21 +87,20 @@ class SocketServer:
                         for floor_index, (f1, f2) in enumerate(zip(floors1, floors2)):
                             if f1 == f2 and f1 != 0:
                                 machine_type = "loader" if f1 == 1 else "unloader"
-                                mission_item = {
-                                    "floor": f1,
-                                    "line": lines1,
-                                    "machine_type": machine_type,
-                                }
-
-                                # Tránh cập nhật trùng nếu đã có (tùy vào yêu cầu bạn)
                                 mission_key = (f1, tuple(lines1), machine_type)
-                                if not hasattr(self, "mission_history"):
-                                    self.mission_history = set()
 
-                                if mission_key not in self.mission_history:
-                                    self.mission_data.update(mission_item)
-                                    self.mission_history.add(mission_key)
-                                    print(f"Mission được tạo: {mission_item}")
+                                with self.mission_lock:
+                                    if mission_key not in self.mission_history:
+                                        mission_item = {
+                                            "floor": f1,
+                                            "line": lines1,
+                                            "machine_type": machine_type,
+                                        }
+                                        self.mission_data["missions"].append(
+                                            mission_item
+                                        )
+                                        self.mission_history.add(mission_key)
+                                        print(f"Mission được tạo: {mission_item}")
 
         except Exception as e:
             print(f"Lỗi khi xử lý client {address}: {e}")
@@ -116,24 +116,33 @@ class SocketServer:
         print(f"Đã đóng kết nối từ {address}")
 
     def get_received_data(self) -> List[Any]:
-        """Phương thức để truy cập dữ liệu từ bên ngoài"""
+        """Lấy dữ liệu đã nhận (deep copy)"""
         with self._lock:
             return self.received_data.copy()
 
     def get_mission_data(self):
-        with self._lock:
-            return self.mission_data.copy()
+        """Lấy danh sách nhiệm vụ hiện tại"""
+        with self.mission_lock:
+            return self.mission_data["missions"].copy()
 
     def clear_mission_data(self):
-        """Xóa toàn bộ dữ liệu đã nhận"""
-        with self._lock:
-            self.mission_data.clear()
+        """Xóa toàn bộ dữ liệu nhiệm vụ"""
+        with self.mission_lock:
+            self.mission_data["missions"].clear()
+            self.mission_history.clear()
 
-    def remove_first_item_mission_data(self):
-        """Xóa dữ liệu đầu tiên"""
-        with self._lock:
-            if self.mission_data:
-                return self.mission_data.pop()
+    def remove_first_mission(self):
+        """Xoá nhiệm vụ đầu tiên và loại bỏ khỏi lịch sử"""
+        with self.mission_lock:
+            if self.mission_data["missions"]:
+                mission = self.mission_data["missions"].pop(0)
+                key = (
+                    mission["floor"],
+                    tuple(mission["line"]),
+                    mission["machine_type"],
+                )
+                self.mission_history.discard(key)
+                return mission
             return None
 
     def stop(self):
@@ -146,6 +155,7 @@ class SocketServer:
         print("Server đã dừng")
 
     def get_client_socket_by_ip(self, target_ip):
+        """Tìm socket client theo IP"""
         for client_socket in self.clients:
             try:
                 client_ip = client_socket.getpeername()[0]
@@ -156,13 +166,10 @@ class SocketServer:
         return None
 
     def broadcast_message(self, message: str, target_socket: socket.socket = None):
-        """
-        Gửi tin nhắn đến một client cụ thể hoặc tất cả các client
-        """
+        """Gửi tin nhắn tới tất cả hoặc một client cụ thể"""
         encoded_message = message.encode("utf-8")
-        with self._lock:  # Sử dụng lock để đảm bảo thread safety
+        with self._lock:
             if target_socket:
-                # Gửi tin nhắn đến một client cụ thể
                 try:
                     target_socket.send(encoded_message)
                     print(
@@ -171,11 +178,10 @@ class SocketServer:
                 except Exception as e:
                     print(f"Lỗi khi gửi tin nhắn đến client cụ thể: {e}")
             else:
-                # Gửi tin nhắn đến tất cả client
                 for client in self.clients:
                     try:
                         client.send(encoded_message)
                     except Exception as e:
                         print(f"Lỗi khi gửi tin nhắn đến client: {e}")
-                        continue  # Tiếp tục gửi tin nhắn đến client khác nếu gặp lỗi
+                        continue
                 print(f"Đã gửi tin nhắn đến tất cả client: {message}")
