@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from buffer import modbus_client
 from config import ACTION_ADDRESS, TRANSFER_ADDRESS, GIVE_ADDRESS, TURN_ADDRESS
+from socket_server import SocketServer
+from pydantic import BaseModel
+
+socket_server = SocketServer()
 
 app = FastAPI(
     title="Buffer API",
@@ -17,6 +21,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class Mission(BaseModel):
+    floor: int
+    line: str
+    machine_type: str
 
 
 @app.get("/buffer")
@@ -60,3 +69,10 @@ async def turn(direction: str):
     elif direction == "counterclockwise":
         modbus_client.write_register(TURN_ADDRESS, 1)
         return {"message": "Buffer đã nhận lệnh quay nghịch."}
+    
+@app.get("/current_mission", response_model=Mission | None)
+async def get_current_mission():
+    missions = socket_server.get_mission_data()
+    if missions:
+        return missions[0]
+    return {"message": "Không có nhiệm vụ hiện tại."}
