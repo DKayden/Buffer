@@ -4,8 +4,12 @@ from buffer import modbus_client
 from config import ACTION_ADDRESS, TRANSFER_ADDRESS, GIVE_ADDRESS, TURN_ADDRESS
 from socket_server import SocketServer
 from pydantic import BaseModel
+from process_handle import ProccessHandler
+import threading
+from test import pause_event, cancel_event
 
 socket_server = SocketServer()
+process_handler = ProccessHandler()
 
 app = FastAPI(
     title="Buffer API",
@@ -76,3 +80,19 @@ async def get_current_mission():
     if missions:
         return missions[0]
     return {"message": "Không có nhiệm vụ hiện tại."}
+
+@app.post("/mission_control")
+async def mission_control(type: str):
+    if type not in ["pause", "resume", "cancel"]:
+        return {"error": "Giá trị type không hợp lệ. Chỉ chấp nhận: pause, resume, cancel."}
+    try:
+        if type == "pause":
+            pause_event.set()
+        elif type == "resume":
+            pause_event.clear()
+        elif type == "cancel":
+            cancel_event.set()
+        process_handler.control_navigate_action(type)
+        return {"message": f"Đã gửi lệnh {type} thành công!"}
+    except Exception as e:
+        return {"error": str(e)}

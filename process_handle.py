@@ -272,6 +272,23 @@ class ProccessHandler:
             raise requests.exceptions.RequestException(
                 "Thất bại trong kiểm tra status của robot"
             ) from e
+        
+    def control_navigate_action(self, type):
+        try:
+            response = requests.get(f"{self.robot_url}/action",
+                                    json={
+                                        "type":type
+                                    },)
+            if response.status_code != 200:
+                raise requests.exceptions.RequestException(
+                    f"Lỗi đường truyền khi điều khiển action của robot. Mã trạng thái: {response.status_code}"
+                )
+            print("Action của robot đã được điều khiển thành công")
+        except requests.exceptions.RequestException as e:
+            print(f"Lỗi trong quá trình điều khiển action của robot: {str(e)}")
+            raise requests.exceptions.RequestException(
+                "Thất bại khi điều khiển action của robot"
+            ) from e
 
     def get_data_from_socket_server(self):
         """

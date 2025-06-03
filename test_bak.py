@@ -23,8 +23,6 @@ socket_server = SocketServer()
 stop_threads = False
 process_handler = ProccessHandler()
 
-pause_event = threading.Event()
-cancel_event = threading.Event()
 
 class TimeoutError(Exception):
     """Lỗi timeout"""
@@ -213,7 +211,6 @@ def handle_mission_creation():
 def monitor_data():
     """Giám sát và xử lý dữ liệu"""
     while not stop_threads:
-        check_pause_cancel()
         try:
             if process_handler.mission:
                 logging.info(f"Danh sách nhiệm vụ: {process_handler.mission}")
@@ -334,30 +331,6 @@ def check_send_message():
         time.sleep(5)
 
 
-def run_with_pause_cancel(target_func, *args, **kwargs):
-    """
-    Wrapper để thực thi target_func, tự động kiểm tra pause/cancel giữa các bước.
-    target_func phải định kỳ gọi check_pause_cancel() ở các điểm an toàn.
-    """
-    try:
-        while pause_event.is_set():
-            time.sleep(0.5)
-        if cancel_event.is_set():
-            print("Mission cancelled before start")
-            return
-        return target_func(*args, **kwargs)
-    except Exception as e:
-        print(f"Mission interrupted: {e}")
-        return
-
-
-def check_pause_cancel():
-    if cancel_event.is_set():
-        raise Exception("Mission cancelled")
-    while pause_event.is_set():
-        time.sleep(0.5)
-
-
 if __name__ == "__main__":
     try:
         logging.info("Đang khởi động server...")
@@ -366,7 +339,7 @@ if __name__ == "__main__":
         mission_create_thread = threading.Thread(target=handle_mission_creation)
         mission_create_thread.daemon = True
 
-        monitor_thread = threading.Thread(target=run_with_pause_cancel, args=(monitor_data,))
+        monitor_thread = threading.Thread(target=monitor_data)
         monitor_thread.daemon = True
 
         mission_create_thread.start()
