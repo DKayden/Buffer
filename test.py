@@ -26,6 +26,8 @@ process_handler = ProccessHandler()
 pause_event = threading.Event()
 cancel_event = threading.Event()
 
+magazine_status = None
+
 class TimeoutError(Exception):
     """Lỗi timeout"""
 
@@ -212,6 +214,7 @@ def handle_mission_creation():
 
 def monitor_data():
     """Giám sát và xử lý dữ liệu"""
+    global magazine_status
     while not stop_threads:
         check_pause_cancel()
         try:
@@ -224,6 +227,11 @@ def monitor_data():
                 floor = mission["floor"]
                 line = mission["line"]
                 machine_type = mission["machine_type"]
+
+                magazine_status = {
+                    "mission" : line,
+                    "floor" : floor
+                }
 
                 pick_up_type = "unloader" if machine_type == "loader" else "loader"
                 destination_type = machine_type
@@ -312,6 +320,7 @@ def monitor_data():
                 process_handler.mission.pop(0)
                 logging.info(f"Mission remainning: {process_handler.mission}")
                 if not process_handler.mission:
+                    magazine_status = None
                     handle_robot_movement(
                         STANDBY_LOCATION,
                         "Robot chưa hoàn thành di chuyển tới vị trí standby",

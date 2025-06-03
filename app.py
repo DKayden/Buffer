@@ -2,13 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from buffer import modbus_client
 from config import ACTION_ADDRESS, TRANSFER_ADDRESS, GIVE_ADDRESS, TURN_ADDRESS
-from socket_server import SocketServer
 from pydantic import BaseModel
 from process_handle import ProccessHandler
 import threading
-from test import pause_event, cancel_event
+from test import pause_event, cancel_event, magazine_status
 
-socket_server = SocketServer()
 process_handler = ProccessHandler()
 
 app = FastAPI(
@@ -25,11 +23,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-class Mission(BaseModel):
-    floor: int
-    line: str
-    machine_type: str
 
 
 @app.get("/buffer")
@@ -73,13 +66,6 @@ async def turn(direction: str):
     elif direction == "counterclockwise":
         modbus_client.write_register(TURN_ADDRESS, 1)
         return {"message": "Buffer đã nhận lệnh quay nghịch."}
-    
-@app.get("/current_mission", response_model=Mission | None)
-async def get_current_mission():
-    missions = socket_server.get_mission_data()
-    if missions:
-        return missions[0]
-    return {"message": "Không có nhiệm vụ hiện tại."}
 
 @app.post("/mission_control")
 async def mission_control(type: str):
@@ -96,3 +82,7 @@ async def mission_control(type: str):
         return {"message": f"Đã gửi lệnh {type} thành công!"}
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/magazine_status")
+async def get_magazine_status():
+    return {"magazine_status": magazine_status}
