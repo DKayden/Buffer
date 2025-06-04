@@ -272,13 +272,12 @@ class ProccessHandler:
             raise requests.exceptions.RequestException(
                 "Thất bại trong kiểm tra status của robot"
             ) from e
-        
+
     def control_navigate_action(self, type):
         try:
-            response = requests.get(f"{self.robot_url}/action",
-                                    json={
-                                        "type":type
-                                    },)
+            response = requests.get(
+                f"{self.robot_url}/action?type={type}",
+            )
             if response.status_code != 200:
                 raise requests.exceptions.RequestException(
                     f"Lỗi đường truyền khi điều khiển action của robot. Mã trạng thái: {response.status_code}"
@@ -365,16 +364,16 @@ class ProccessHandler:
                 "machine_type": machine_type,
             }
             if not self.is_duplicate_mission(new_mission):
-                if floor == 1:
-                    insert_pos = 0
-                    for i, mission in enumerate(self.mission):
-                        if mission["floor"] == 2:
-                            insert_pos = i
-                            break
-                        insert_pos = i + 1
-                    self.mission.insert(insert_pos, new_mission)
-                else:
-                    self.mission.append(new_mission)
+                # if floor == 1:
+                #     insert_pos = 0
+                #     for i, mission in enumerate(self.mission):
+                #         if mission["floor"] == 2:
+                #             insert_pos = i
+                #             break
+                #         insert_pos = i + 1
+                #     self.mission.insert(insert_pos, new_mission)
+                # else:
+                self.mission.append(new_mission)
                 logging.info(f"Đã thêm nhiệm vụ mới: {new_mission}")
             # else:
             #     raise ValueError("Nhiệm vụ này đã tồn tại trong danh sách chờ")

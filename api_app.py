@@ -2,10 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from buffer import modbus_client
 from config import ACTION_ADDRESS, TRANSFER_ADDRESS, GIVE_ADDRESS, TURN_ADDRESS
-from pydantic import BaseModel
 from process_handle import ProccessHandler
-import threading
-from test import pause_event, cancel_event, magazine_status
+import state
 
 process_handler = ProccessHandler()
 
@@ -67,22 +65,26 @@ async def turn(direction: str):
         modbus_client.write_register(TURN_ADDRESS, 1)
         return {"message": "Buffer đã nhận lệnh quay nghịch."}
 
+
 @app.post("/mission_control")
 async def mission_control(type: str):
     if type not in ["pause", "resume", "cancel"]:
-        return {"error": "Giá trị type không hợp lệ. Chỉ chấp nhận: pause, resume, cancel."}
+        return {
+            "error": "Giá trị type không hợp lệ. Chỉ chấp nhận: pause, resume, cancel."
+        }
     try:
         if type == "pause":
-            pause_event.set()
+            state.pause_event.set()
         elif type == "resume":
-            pause_event.clear()
+            state.pause_event.clear()
         elif type == "cancel":
-            cancel_event.set()
+            state.cancel_event.set()
         process_handler.control_navigate_action(type)
         return {"message": f"Đã gửi lệnh {type} thành công!"}
     except Exception as e:
         return {"error": str(e)}
 
+
 @app.get("/magazine_status")
 async def get_magazine_status():
-    return {"magazine_status": magazine_status}
+    return {"magazine_status": state.magazine_status}
