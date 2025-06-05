@@ -389,8 +389,7 @@ def robot_to_standby():
 def reset_status_robot():
     process_handler.control_folk_conveyor("stop")
     process_handler.control_folk_conveyor(50)
-    process_handler.control_robot_stopper("cw", "close")
-    process_handler.control_robot_stopper("ccw", "close")
+    process_handler.control_robot_stopper("all", "close")
 
 
 def check_send_message():
