@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List, Any
 import json
 from config import SOCKET_HOST, SOCKET_PORT, MAP_ADDRESS
+import state
 
 
 class SocketServer:
@@ -24,8 +25,16 @@ class SocketServer:
         self.mission_lock = threading.Lock()
         self.mission_history = set()
         self.mission_data = {"missions": []}
+        self._init_call_status()
 
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
+
+    def _init_call_status(self):
+        for info in self.receive_dict_value.values():
+            line = info.get("line", "").replace(" ", "").lower()
+            machine_type = info.get("machine_type", "").lower()
+            key = f"call_{machine_type}_{line}"
+            state.call_status[key] = 0
 
     def start(self):
         """Khởi động server và lắng nghe kết nối"""
@@ -52,6 +61,19 @@ class SocketServer:
             print(f"Kết nối mới từ {address}")
             self.executor.submit(self.handle_client, client_socket, address)
 
+    def _update_call_status(self):
+        for key in state.call_status:
+            state.call_status[key] = 0
+
+        for ip, info in self.receive_dict_value.items():
+            line = info.get("line", "").replace(" ", "").lower()
+            machine_type = info.get("machine_type", "").lower()
+            key = f"call_{machine_type}_{line}"
+            floors = info.get("floor", [])
+            if any(f != 0 for f in floors):
+                if key in state.call_status:
+                    state.call_status[key] = 1
+
     def handle_client(self, client_socket: socket.socket, address: tuple):
         """Xử lý dữ liệu từ một client cụ thể"""
         try:
@@ -67,6 +89,8 @@ class SocketServer:
 
                 with self._lock:
                     self.receive_dict_value[address[0]] = processed_data
+
+                    self._update_call_status()
 
                     for ip1, ip2 in MAP_ADDRESS:
                         client1_data = self.receive_dict_value.get(ip1)

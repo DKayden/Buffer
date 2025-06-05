@@ -88,3 +88,8 @@ async def mission_control(type: str):
 @app.get("/magazine_status")
 async def get_magazine_status():
     return {"magazine_status": state.magazine_status}
+
+
+@app.get("/call_status")
+async def get_call_status():
+    return state.call_status
