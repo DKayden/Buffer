@@ -14,3 +14,5 @@ call_status = {
     "call_unloader_line27": 0,
     "call_unloader_line28": 0,
 }
+
+robot_status = "IDLE"

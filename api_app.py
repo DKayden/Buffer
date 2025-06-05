@@ -93,3 +93,8 @@ async def get_magazine_status():
 @app.get("/call_status")
 async def get_call_status():
     return state.call_status
+
+
+@app.get("/robot_status")
+async def get_robot_status():
+    return state.robot_status

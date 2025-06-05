@@ -254,6 +254,8 @@ def monitor_data():
                 pick_up_type = "unloader" if machine_type == "loader" else "loader"
                 destination_type = machine_type
 
+                state.robot_status = "BUSY"
+
                 handle_tranfer_magazine(pick_up, line, pick_up_type, floor, "pickup")
 
                 handle_robot_movement(
@@ -363,6 +365,7 @@ def handle_exception_mission(exception):
         if process_handler.mission:
             try:
                 process_handler.mission.pop(0)
+                reset_status_robot()
                 logging.info("Đã loại bỏ nhiệm vụ bị hủy.")
             except Exception as pop_err:
                 logging.warning(f"Lỗi khi loại bỏ nhiệm vụ: {pop_err}")
@@ -372,23 +375,31 @@ def handle_exception_mission(exception):
 
 def robot_to_standby():
     state.magazine_status = None
+    state.robot_status = "IDLE"
     process_handler.control_led("yellow")
     try:
         handle_robot_movement(
             STANDBY_LOCATION, "Robot chưa hoàn thành quay về standby."
         )
-        process_handler.control_folk_conveyor(50)
+        reset_status_robot()
     except Exception as move_err:
         logging.warning(f"Lỗi khi đưa robot về standby: {move_err}")
 
 
+def reset_status_robot():
+    process_handler.control_folk_conveyor("stop")
+    process_handler.control_folk_conveyor(50)
+    process_handler.control_robot_stopper("cw", "close")
+    process_handler.control_robot_stopper("ccw", "close")
+
+
 def check_send_message():
     while not stop_threads:
-        target_ip = LINE_CONFIG.get(("line 26", "unloader", 2), {}).get("address")
+        target_ip = LINE_CONFIG.get(("line 28", "unloader", 2), {}).get("address")
         target = socket_server.get_client_socket_by_ip(target_ip)
         # print(f"TARGET: {target}")
         if target:
-            process_handler.send_message_to_call(target, "line 26", "unloader", 2)
+            process_handler.send_message_to_call(target, "line 28", "unloader", 2)
         time.sleep(5)
 
 
@@ -418,6 +429,7 @@ def check_pause_cancel():
         # Xóa nhiệm vụ hiện tại nếu còn
         if process_handler.mission:
             process_handler.mission.pop(0)
+            reset_status_robot()
             print(f"Mission after cancel: {process_handler.mission}")
             logging.info("Đã loại bỏ nhiệm vụ hiện tại khỏi danh sách.")
 
@@ -434,6 +446,7 @@ def check_pause_cancel():
 
             if process_handler.mission:
                 process_handler.mission.pop(0)
+                reset_status_robot()
                 print(f"Mission after cancel: {process_handler.mission}")
                 logging.info("Đã loại bỏ nhiệm vụ hiện tại khỏi danh sách.")
 
