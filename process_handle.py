@@ -428,6 +428,10 @@ class ProccessHandler:
             if line in state.line_auto_web:
                 state.line_auto_web.remove(line)
 
+    def is_line_auto(self, line):
+        with state.line_auto_web_lock:
+            return line in state.line_auto_web
+
     def process_handle_tranfer_goods(self, location, line, machine_type, floor, type):
         """
         Hàm này xử lý quá trình chuyển hàng giữa robot và máy

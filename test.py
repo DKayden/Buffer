@@ -249,6 +249,10 @@ def monitor_data():
                 line = mission["line"]
                 machine_type = mission["machine_type"]
 
+                if not process_handler.is_line_auto(line.replace(" ", "").lower()):
+                    time.sleep(1)
+                    return
+
                 state.magazine_status = {"mission": line, "floor": floor}
 
                 pick_up_type = "unloader" if machine_type == "loader" else "loader"
