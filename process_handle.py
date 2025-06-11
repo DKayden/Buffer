@@ -23,6 +23,7 @@ import logging
 from collections import deque
 import json
 import time
+import state
 
 # buffer_db = BufferDatabase()
 
@@ -416,6 +417,16 @@ class ProccessHandler:
             )
             self.send_message_to_call(target_ip, line, machine_type, infor_floor)
             # raise
+
+    def add_line_auto(self, line):
+        with state.line_auto_web_lock:
+            if line not in state.line_auto_web_lock:
+                state.line_auto_web.append(line)
+
+    def remove_line_auto(self, line):
+        with state.line_auto_web_lock:
+            if line in state.line_auto_web:
+                state.line_auto_web.remove(line)
 
     def process_handle_tranfer_goods(self, location, line, machine_type, floor, type):
         """

@@ -98,3 +98,13 @@ async def get_call_status():
 @app.get("/robot_status")
 async def get_robot_status():
     return state.robot_status
+
+@app.post("/line_auto_web/add")
+async def add_line_auto(line: str):
+    process_handler.add_line_auto(line)
+    return {"message": "Đã thêm dòng tự động."}
+
+@app.post("/line_auto_web/remove")
+async def remove_line_auto(line: str):
+    process_handler.remove_line_auto(line)
+    return {"message": "Đã xóa dòng tự động."}

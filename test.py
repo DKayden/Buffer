@@ -254,7 +254,7 @@ def monitor_data():
                 pick_up_type = "unloader" if machine_type == "loader" else "loader"
                 destination_type = machine_type
 
-                state.robot_status = "BUSY"
+                state.robot_status = False
 
                 handle_tranfer_magazine(pick_up, line, pick_up_type, floor, "pickup")
 
@@ -375,7 +375,7 @@ def handle_exception_mission(exception):
 
 def robot_to_standby():
     state.magazine_status = None
-    state.robot_status = "IDLE"
+    state.robot_status = True
     process_handler.control_led("yellow")
     try:
         handle_robot_movement(

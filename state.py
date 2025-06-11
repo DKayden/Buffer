@@ -15,4 +15,14 @@ call_status = {
     "call_unloader_line28": 0,
 }
 
-robot_status = "IDLE"
+robot_status = True
+
+line_auto_web = []
+line_auto_web_lock = threading.Lock()
+
+history = {
+    "status" : str,
+    "type" : str,
+    "mission" : str,
+    "floor" : int,
+}
