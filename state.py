@@ -16,13 +16,17 @@ call_status = {
 }
 
 robot_status = True
+mode = ""
 
 line_auto_web = []
-line_auto_web_lock = threading.Lock()
+# line_auto_web_lock = threading.Lock()
 
 history = {
-    "status" : str,
-    "type" : str,
-    "mission" : str,
-    "floor" : int,
+    "status": "",
+    "type": "",
+    "mission": "",
+    "floor": 0,
 }
+
+data_status = {}
+messenge = ""

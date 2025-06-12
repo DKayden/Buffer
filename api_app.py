@@ -66,21 +66,21 @@ async def turn(direction: str):
         return {"message": "Buffer đã nhận lệnh quay nghịch."}
 
 
-@app.post("/mission_control")
-async def mission_control(type: str):
-    if type not in ["pause", "resume", "cancel"]:
+@app.post("/type")
+async def mission_control(data: dict):
+    if data["type"] not in ["pause", "resume", "cancel"]:
         return {
             "error": "Giá trị type không hợp lệ. Chỉ chấp nhận: pause, resume, cancel."
         }
     try:
-        if type == "pause":
+        if data["type"] == "pause":
             state.pause_event.set()
-        elif type == "resume":
+        elif data["type"] == "resume":
             state.pause_event.clear()
-        elif type == "cancel":
+        elif data["type"] == "cancel":
             state.cancel_event.set()
-        process_handler.control_navigate_action(type)
-        return {"message": f"Đã gửi lệnh {type} thành công!"}
+        process_handler.control_navigate_action(data["type"])
+        return {"message": f"Đã gửi lệnh {data['type']} thành công!"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -99,12 +99,31 @@ async def get_call_status():
 async def get_robot_status():
     return state.robot_status
 
-@app.post("/line_auto_web/add")
-async def add_line_auto(line: str):
-    process_handler.add_line_auto(line)
-    return {"message": "Đã thêm dòng tự động."}
+
+@app.get("/status")
+async def robot_status():
+    result = process_handler.read_robot_status()
+    return result
+
+
+@app.post("/line_auto")
+async def add_line_auto(data: dict):
+    process_handler.add_line_auto(data["line"])
+    return {"message": state.line_auto_web}
+
 
 @app.post("/line_auto_web/remove")
 async def remove_line_auto(line: str):
     process_handler.remove_line_auto(line)
     return {"message": "Đã xóa dòng tự động."}
+
+
+@app.post("/mode")
+async def robot_mode(data: dict):
+    state.mode = data["mode"]
+    return {"message": "Đã thay đổi chế độ."}
+
+
+@app.post("/run")
+async def robot_mode(data: dict):  # {"line": "line26", type: "unload", "floor": 1}
+    return {"message": data}

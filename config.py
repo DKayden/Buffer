@@ -98,7 +98,7 @@ LINE_CONFIG = {
         "address": "192.168.1.29",
     },
     ("line 26", "unloader", 1): {
-        "line_height": 45,
+        "line_height": 50,
         "buffer_action": "flip",
         "buffer_turn": "counterclockwise",
         "stopper_action": "cw",
@@ -134,7 +134,7 @@ LINE_CONFIG = {
         "address": "192.168.1.31",
     },
     ("line 27", "unloader", 1): {
-        "line_height": 10,
+        "line_height": 5,
         "buffer_action": "flip",
         "buffer_turn": "clockwise",
         "stopper_action": "ccw",
@@ -190,4 +190,4 @@ LINE_CONFIG = {
 }
 
 STANDBY_LOCATION = "LM100"
-CHARGE_LOCATION = "LM10"
+CHARGE_LOCATION = "LM101"

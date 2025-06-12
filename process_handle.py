@@ -375,6 +375,7 @@ class ProccessHandler:
                 #     self.mission.insert(insert_pos, new_mission)
                 # else:
                 self.mission.append(new_mission)
+                socket_server.remove_first_mission()
                 logging.info(f"Đã thêm nhiệm vụ mới: {new_mission}")
             # else:
             #     raise ValueError("Nhiệm vụ này đã tồn tại trong danh sách chờ")
@@ -387,6 +388,7 @@ class ProccessHandler:
             machine_type = data.get("machine_type")
 
             self._create_mission_from_data(line, machine_type, floor)
+            # socket_server.remove_first_mission()
 
         except Exception as e:
             logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
@@ -419,9 +421,9 @@ class ProccessHandler:
             # raise
 
     def add_line_auto(self, line):
-        with state.line_auto_web_lock:
-            if line not in state.line_auto_web_lock:
-                state.line_auto_web.append(line)
+        # with state.line_auto_web_lock:
+        # if line not in state.line_auto_web_lock:
+        state.line_auto_web = line
 
     def remove_line_auto(self, line):
         with state.line_auto_web_lock:
@@ -429,8 +431,36 @@ class ProccessHandler:
                 state.line_auto_web.remove(line)
 
     def is_line_auto(self, line):
-        with state.line_auto_web_lock:
-            return line in state.line_auto_web
+        # with state.line_auto_web_lock:
+        return line in state.line_auto_web
+
+    def read_robot_status(self):
+        state.data_status.update(self.get_data_status_robot())
+        call_status = {
+            "Call_Load_L25": state.call_status["call_loader_line25"],
+            "Call_Load_L26": state.call_status["call_loader_line26"],
+            "Call_Load_L27": state.call_status["call_loader_line27"],
+            "Call_Load_L28": state.call_status["call_loader_line28"],
+            "Call_UnLoad_L25": state.call_status["call_unloader_line25"],
+            "Call_UnLoad_L26": state.call_status["call_unloader_line26"],
+            "Call_UnLoad_L27": state.call_status["call_unloader_line27"],
+            "Call_UnLoad_L28": state.call_status["call_unloader_line28"],
+        }
+        magazine_status = state.magazine_status
+
+        data_sensor = [
+            self.get_information_sensor_robot()[5],
+            self.get_information_sensor_robot()[6],
+        ]
+
+        state.data_status["callStatus"] = call_status
+        state.data_status["magazine_status"] = magazine_status
+        state.data_status["message"] = state.messenge
+        state.data_status["history"] = state.history
+        state.data_status["mode"] = state.mode
+        state.data_status["idle"] = state.robot_status
+        state.data_status["sensors"] = data_sensor
+        return state.data_status
 
     def process_handle_tranfer_goods(self, location, line, machine_type, floor, type):
         """
