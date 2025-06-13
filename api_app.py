@@ -4,6 +4,7 @@ from buffer import modbus_client
 from config import ACTION_ADDRESS, TRANSFER_ADDRESS, GIVE_ADDRESS, TURN_ADDRESS
 from process_handle import ProccessHandler
 import state
+import re
 
 process_handler = ProccessHandler()
 
@@ -125,5 +126,11 @@ async def robot_mode(data: dict):
 
 
 @app.post("/run")
-async def robot_mode(data: dict):  # {"line": "line26", type: "unload", "floor": 1}
+async def run_manual(data: dict):  # {"line": "line26", type: "unload", "floor": 1}
+    mission_item = {
+        "floor": data["floor"],
+        "line": re.sub(r"([a-zA-Z])(\d)", r"\1 \2", data["line"]),
+        "machine_type": data["type"],
+    }
+    process_handler.create_mission(mission_item)
     return {"message": data}

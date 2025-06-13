@@ -16,6 +16,7 @@ from config import (
     HEIGHT_BUFFER,
     STANDBY_LOCATION,
     LINE_CONFIG,
+    CHARGE_LOCATION,
 )
 from mongodb import BufferDatabase
 from socket_server import SocketServer
@@ -48,10 +49,12 @@ class ProccessHandler:
                 raise requests.exceptions.RequestException(
                     f"Lỗi đường truyền khi gửi thông tin đến robot. Trạng thái: {response.status_code}"
                 )
-            print(f"Robot di chuyển tới: {location}")
+            self.write_message_on_GUI(f"Robot di chuyển tới: {location}")
 
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình điều khiển di chuyển của robot: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình điều khiển di chuyển của robot: {str(e)}"
+            )
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển di chuyển của robot"
             ) from e
@@ -67,13 +70,13 @@ class ProccessHandler:
         if flag.status_code == 200:
             data = flag.json()
             if str(data) == "True":
-                print("Robot đã tới vị trí")
+                self.write_message_on_GUI(f"Robot đã tới vị trí {location}")
                 return True
             else:
-                print("Robot chưa tới vị trí")
+                self.write_message_on_GUI(f"Robot chưa tới vị trí {location}")
                 return False
         else:
-            print("Yêu cầu không thành công")
+            self.write_message_on_GUI("Yêu cầu kiểm tra vị trí không thành công")
             return False
 
     def control_robot_conveyor(self, direction):
@@ -96,9 +99,11 @@ class ProccessHandler:
                 raise requests.exceptions.RequestException(
                     f"Lỗi đường truyền khi điều khiển băng tải của robot. Trạng thái: {response.status_code}"
                 )
-            print("Băng tải của robot đã được điều khiển")
+            self.write_message_on_GUI("Băng tải của robot đã được điều khiển")
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình điều khiển băng tải của robot: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình điều khiển băng tải của robot: {str(e)}"
+            )
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển băng tải của robot"
             ) from e
@@ -118,7 +123,7 @@ class ProccessHandler:
                 )
             return response
         except requests.exceptions.RequestException as e:
-            print(
+            self.write_message_on_GUI(
                 f"Lỗi trong quá trình kiểm tra trạng thái băng tải của robot: {str(e)}"
             )
             raise requests.exceptions.RequestException(
@@ -142,9 +147,13 @@ class ProccessHandler:
                 raise requests.exceptions.RequestException(
                     f"Lỗi đường truyền khi điều khiển cửa băng tải của robot. Mã trạng thái: {response.status_code}"
                 )
-            print("Cửa băng tải của robot đã được điều khiển thành công")
+            self.write_message_on_GUI(
+                "Cửa băng tải của robot đã được điều khiển thành công"
+            )
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình điều khiển cửa băng tải của robot: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình điều khiển cửa băng tải của robot: {str(e)}"
+            )
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển cửa băng tải của robot"
             ) from e
@@ -163,13 +172,15 @@ class ProccessHandler:
                 )
             data = response.json()
             if str(data) == "True":
-                print("Stopper da dung trang thai")
+                self.write_message_on_GUI("Stopper đã đúng trạng thái")
                 return True
             else:
-                print("Stopper chua dung trang thai")
+                self.write_message_on_GUI("Stopper chưa đúng trạng thái")
                 return False
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình điều khiển cửa băng tải của robot: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình điều khiển cửa băng tải của robot: {str(e)}"
+            )
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển cửa băng tải của robot"
             ) from e
@@ -189,9 +200,13 @@ class ProccessHandler:
                 raise requests.exceptions.RequestException(
                     f"Lỗi đường truyền khi điều khiển nâng băng tải của robot. Mã trạng thái: {response.status_code}"
                 )
-            print("Nâng băng tải của robot đã được điều khiển thành công")
+            self.write_message_on_GUI(
+                "Nâng băng tải của robot đã được điều khiển thành công"
+            )
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình điều khiển nâng băng tải của robot: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình điều khiển nâng băng tải của robot: {str(e)}"
+            )
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển nâng băng tải của robot"
             ) from e
@@ -205,13 +220,15 @@ class ProccessHandler:
                 )
             data = response.json()
             if str(data) == "True":
-                print("Băng tải đã tới vị trí")
+                self.write_message_on_GUI(f"Băng tải đã tới độ cao {height}")
                 return True
             else:
-                print("Băng tải chưa tới vị trí")
+                self.write_message_on_GUI(f"Băng tải chưa tới độ cao {height}")
                 return False
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình điều khiển nâng băng tải của robot: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình điều khiển nâng băng tải của robot: {str(e)}"
+            )
             raise requests.exceptions.RequestException(
                 "Thất bại khi kiểm tra nâng băng tải của robot"
             ) from e
@@ -226,7 +243,7 @@ class ProccessHandler:
             data = response.json()
             return data
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình kiểm tra sensor: {str(e)}")
+            self.write_message_on_GUI(f"Lỗi trong quá trình kiểm tra sensor: {str(e)}")
             raise requests.exceptions.RequestException(
                 "Thất bại trong kiểm tra sensor của robot"
             ) from e
@@ -252,9 +269,11 @@ class ProccessHandler:
                 raise requests.exceptions.RequestException(
                     f"Lỗi đường truyền khi điều khiển led của robot. Mã trạng thái: {response.status_code}"
                 )
-            print("Led của robot đã được điều khiển thành công")
+            # self.write_message_on_GUI(f"Led của robot đã chuyển thành {color}")
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình điều khiển led của robot: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình điều khiển led của robot: {str(e)}"
+            )
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển led của robot"
             ) from e
@@ -269,7 +288,7 @@ class ProccessHandler:
             data = response.json()
             return data
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình kiểm tra status: {str(e)}")
+            self.write_message_on_GUI(f"Lỗi trong quá trình kiểm tra status: {str(e)}")
             raise requests.exceptions.RequestException(
                 "Thất bại trong kiểm tra status của robot"
             ) from e
@@ -283,9 +302,11 @@ class ProccessHandler:
                 raise requests.exceptions.RequestException(
                     f"Lỗi đường truyền khi điều khiển action của robot. Mã trạng thái: {response.status_code}"
                 )
-            print("Action của robot đã được điều khiển thành công")
+            self.write_message_on_GUI("Action của robot đã được điều khiển thành công")
         except requests.exceptions.RequestException as e:
-            print(f"Lỗi trong quá trình điều khiển action của robot: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình điều khiển action của robot: {str(e)}"
+            )
             raise requests.exceptions.RequestException(
                 "Thất bại khi điều khiển action của robot"
             ) from e
@@ -302,7 +323,9 @@ class ProccessHandler:
                 return
             return data
         except Exception as e:
-            print(f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}"
+            )
             raise e from None
 
     def get_mission_from_socket_server(self):
@@ -314,7 +337,9 @@ class ProccessHandler:
                 return
             return data
         except Exception as e:
-            print(f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}")
+            self.write_message_on_GUI(
+                f"Lỗi trong quá trình lấy dữ liệu từ socket server: {str(e)}"
+            )
             raise e from None
 
     def is_duplicate_mission(self, new_mission):
@@ -408,7 +433,9 @@ class ProccessHandler:
                 }
                 json_message = json.dumps(messsage)
                 socket_server.broadcast_message(json_message, target_ip)
-                print(f"Đã gửi thông tin tới máy {target_ip.getpeername()[0]}")
+                self.write_message_on_GUI(
+                    f"Đã gửi thông tin tới máy {target_ip.getpeername()[0]}"
+                )
             # else:
             #     raise ValueError(
             #         f"Không tìm thấy máy để nhận magazine tại vị trí {target_ip}"
@@ -453,6 +480,20 @@ class ProccessHandler:
             self.get_information_sensor_robot()[6],
         ]
 
+        if state.data_status["blocked"] or state.data_status["emergency"]:
+            self.control_led("red")
+            robot_led = "red"
+        elif (
+            state.data_status["current_station"] == CHARGE_LOCATION
+            or state.data_status["battery_level"] < 0.2
+        ):
+            self.control_led("yellow")
+            robot_led = "yellow"
+        else:
+            self.control_led("green")
+            robot_led = "green"
+
+        state.data_status["led"] = robot_led
         state.data_status["callStatus"] = call_status
         state.data_status["magazine_status"] = magazine_status
         state.data_status["message"] = state.messenge
@@ -461,6 +502,17 @@ class ProccessHandler:
         state.data_status["idle"] = state.robot_status
         state.data_status["sensors"] = data_sensor
         return state.data_status
+
+    def write_message_on_GUI(self, message=""):
+        state.messenge = message
+
+    def write_history(self, status, type, mission, floor):
+        state.history = {
+            "status": status,
+            "type": type,
+            "mission": mission,
+            "floor": floor,
+        }
 
     def process_handle_tranfer_goods(self, location, line, machine_type, floor, type):
         """

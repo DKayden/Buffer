@@ -19,7 +19,6 @@ robot_status = True
 mode = ""
 
 line_auto_web = []
-# line_auto_web_lock = threading.Lock()
 
 history = {
     "status": "",
