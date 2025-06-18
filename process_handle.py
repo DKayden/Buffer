@@ -514,6 +514,24 @@ class ProccessHandler:
             "floor": floor,
         }
 
+    def handle_charge_battery(self):
+        try:
+            if state.data_status["battery_level"] < 0.2:
+                self.control_robot_to_location(CHARGE_LOCATION)
+                while not self.check_location_robot(CHARGE_LOCATION):
+                    self.write_message_on_GUI("Robot chưa hoàn thành di chuyển tới vị trí nạp pin")
+                    time.sleep(6)
+                while state.data_status["battery_level"] < 0.9:
+                    self.write_message_on_GUI("Robot chưa hoàn thành nạp pin")
+                    time.sleep(6)
+                self.control_robot_to_location(STANDBY_LOCATION)
+                while not self.check_location_robot(STANDBY_LOCATION):
+                    self.write_message_on_GUI("Robot chưa hoàn thành di chuyển tới vị trí standby")
+                    time.sleep(6)
+        except Exception as e:
+            logging.error(f"Lỗi trong quá trình nạp pin: {str(e)}")
+            raise
+
     def process_handle_tranfer_goods(self, location, line, machine_type, floor, type):
         """
         Hàm này xử lý quá trình chuyển hàng giữa robot và máy

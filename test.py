@@ -247,6 +247,7 @@ def monitor_data():
     """Giám sát và xử lý dữ liệu"""
     while not stop_threads:
         try:
+            process_handler.handle_charge_battery()
             check_pause_cancel()
 
             if process_handler.mission:
