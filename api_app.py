@@ -130,7 +130,7 @@ async def run_manual(data: dict):  # {"line": "line26", type: "unload", "floor":
     mission_item = {
         "floor": data["floor"],
         "line": re.sub(r"([a-zA-Z])(\d)", r"\1 \2", data["line"]),
-        "machine_type": data["type"],
+        "machine_type": data["type"] + "er",
     }
     process_handler.create_mission(mission_item)
-    return {"message": data}
+    return {"message": "Đã thêm nhiệm vụ manual mới"}

@@ -29,3 +29,4 @@ history = {
 
 data_status = {}
 messenge = ""
+mission = []
