@@ -35,7 +35,6 @@ socket_server = SocketServer()
 class ProccessHandler:
     def __init__(self):
         self.robot_url = f"http://{ROBOT_HOST}:{ROBOT_PORT}"
-        self.mission = []
 
     def control_robot_to_location(self, location):
         try:
@@ -346,7 +345,7 @@ class ProccessHandler:
         """
         Hàm này kiểm tra xem nhiệm vụ mới có trùng với nhiệm vụ đã đăng ký hay không.
         """
-        for mission in self.mission:
+        for mission in state.mission:
             if (
                 mission["pick_up"] == new_mission["pick_up"]
                 and mission["destination"] == new_mission["destination"]
@@ -392,14 +391,14 @@ class ProccessHandler:
             if not self.is_duplicate_mission(new_mission):
                 # if floor == 1:
                 #     insert_pos = 0
-                #     for i, mission in enumerate(self.mission):
+                #     for i, mission in enumerate(state.mission):
                 #         if mission["floor"] == 2:
                 #             insert_pos = i
                 #             break
                 #         insert_pos = i + 1
-                #     self.mission.insert(insert_pos, new_mission)
+                #     state.mission.insert(insert_pos, new_mission)
                 # else:
-                self.mission.append(new_mission)
+                state.mission.append(new_mission)
                 socket_server.remove_first_mission()
                 logging.info(f"Đã thêm nhiệm vụ mới: {new_mission}")
             # else:
@@ -501,6 +500,7 @@ class ProccessHandler:
         state.data_status["mode"] = state.mode
         state.data_status["idle"] = state.robot_status
         state.data_status["sensors"] = data_sensor
+        state.data_status["misson"] = state.mission
         return state.data_status
 
     def write_message_on_GUI(self, message=""):
@@ -514,23 +514,21 @@ class ProccessHandler:
             "floor": floor,
         }
 
-    def handle_charge_battery(self):
-        try:
-            if state.data_status["battery_level"] < 0.2:
-                self.control_robot_to_location(CHARGE_LOCATION)
-                while not self.check_location_robot(CHARGE_LOCATION):
-                    self.write_message_on_GUI("Robot chưa hoàn thành di chuyển tới vị trí nạp pin")
-                    time.sleep(6)
-                while state.data_status["battery_level"] < 0.9:
-                    self.write_message_on_GUI("Robot chưa hoàn thành nạp pin")
-                    time.sleep(6)
-                self.control_robot_to_location(STANDBY_LOCATION)
-                while not self.check_location_robot(STANDBY_LOCATION):
-                    self.write_message_on_GUI("Robot chưa hoàn thành di chuyển tới vị trí standby")
-                    time.sleep(6)
-        except Exception as e:
-            logging.error(f"Lỗi trong quá trình nạp pin: {str(e)}")
-            raise
+    def handle_robot_charging(self):
+        if (
+            state.data_status
+            and state.data_status["battery_level"]
+            and state.data_status["battery_level"] < 0.2
+        ):
+            self.write_message_on_GUI(f"Pin yếu! Cần sạc pin.")
+            self.control_robot_to_location(CHARGE_LOCATION)
+            while not self.check_location_robot(CHARGE_LOCATION):
+                self.write_message_on_GUI(f"Robot chưa di chuyển đến vị trí sạc pin!")
+                time.sleep(3)
+            while state.data_status["battery_level"] < 0.9:
+                self.write_message_on_GUI(f"Robot chưa sạc tới 90%")
+                time.sleep(60)
+            self.control_robot_to_location("LM2007")
 
     def process_handle_tranfer_goods(self, location, line, machine_type, floor, type):
         """
@@ -597,14 +595,14 @@ class ProccessHandler:
             raise
 
     def handle_magazine_process(self):
-        while self.mission:
+        while state.mission:
             try:
                 # Trích xuất thông tin từ danh sách nhiệm vụ
-                pick_up = self.mission[0]["pick_up"]
-                destination = self.mission[0]["destination"]
-                floor = self.mission[0]["floor"]
-                line = self.mission[0]["line"]
-                machine_type = self.mission[0]["machine_type"]
+                pick_up = state.mission[0]["pick_up"]
+                destination = state.mission[0]["destination"]
+                floor = state.mission[0]["floor"]
+                line = state.mission[0]["line"]
+                machine_type = state.mission[0]["machine_type"]
                 print(f"Pickup: {pick_up}, dropoff: {destination}")
                 dir_pick_up = self.direction_conveyor(pick_up)
                 dir_destination = self.direction_conveyor(destination)
@@ -740,8 +738,8 @@ class ProccessHandler:
                 )
 
                 # Xóa nhiệm vụ đã hoàn thành
-                self.mission.pop(0)
-                print(f"Nhiệm vụ đã hoàn thành: {self.mission}")
+                state.mission.pop(0)
+                print(f"Nhiệm vụ đã hoàn thành: {state.mission}")
 
                 # Điều khiển robot tới vị trí standby
                 self.control_robot_to_location(STANDBY_LOCATION)
