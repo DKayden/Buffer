@@ -1,5 +1,6 @@
 import socket
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Any
 import json
@@ -28,13 +29,106 @@ class SocketServer:
         self._init_call_status()
 
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        
+        # Thêm biến để theo dõi trạng thái tín hiệu trước đó
+        self.previous_call_status = {}
+        self.monitoring_thread = None
+        self.stop_monitoring = False
 
     def _init_call_status(self):
-        for info in self.receive_dict_value.values():
-            line = info.get("line", "").replace(" ", "").lower()
-            machine_type = info.get("machine_type", "").lower()
-            key = f"call_{machine_type}_{line}"
-            state.call_status[key] = 0
+        # Khởi tạo tất cả các key có thể có
+        lines = ["line25", "line26", "line27", "line28"]
+        machine_types = ["loader", "unloader"]
+        
+        for line in lines:
+            for machine_type in machine_types:
+                # Key cho floor 1 (không có suffix)
+                key = f"call_{machine_type}_{line}"
+                state.call_status[key] = 0
+                
+                # Key cho floor 1 và 2 (có suffix)
+                for floor_suffix in ["_1", "_2"]:
+                    key = f"call_{machine_type}_{line}{floor_suffix}"
+                    state.call_status[key] = 0
+
+    def start_signal_monitoring(self):
+        """Bắt đầu thread giám sát tín hiệu liên tục"""
+        self.monitoring_thread = threading.Thread(target=self._monitor_signals, daemon=True)
+        self.monitoring_thread.start()
+        print("Đã bắt đầu giám sát tín hiệu loader/unloader")
+
+    def _monitor_signals(self):
+        """Giám sát tín hiệu liên tục và hủy nhiệm vụ khi cần"""
+        while not self.stop_monitoring:
+            try:
+                with self._lock:
+                    current_status = state.call_status.copy()
+                
+                # Kiểm tra các cặp loader/unloader
+                for line_num in ["25", "26", "27", "28"]:
+                    for floor_suffix in ["", "_1", "_2"]:
+                        loader_key = f"call_loader_line{line_num}{floor_suffix}"
+                        unloader_key = f"call_unloader_line{line_num}{floor_suffix}"
+                        
+                        # Chỉ kiểm tra nếu cả hai key đều tồn tại
+                        if (loader_key in current_status and unloader_key in current_status):
+                            loader_current = current_status[loader_key]
+                            unloader_current = current_status[unloader_key]
+                            
+                            # Lấy trạng thái trước đó
+                            loader_previous = self.previous_call_status.get(loader_key, 0)
+                            unloader_previous = self.previous_call_status.get(unloader_key, 0)
+                            
+                            # Nếu có tín hiệu chuyển từ 1 về 0
+                            if (loader_previous == 1 and loader_current == 0) or (unloader_previous == 1 and unloader_current == 0):
+                                print(f"Phát hiện tín hiệu chuyển về 0: {loader_key}={loader_current}, {unloader_key}={unloader_current}")
+                                print(f"Trạng thái trước: {loader_key}={loader_previous}, {unloader_key}={unloader_previous}")
+                                self._cancel_related_missions(line_num, floor_suffix)
+                
+                # Cập nhật trạng thái trước đó
+                self.previous_call_status = current_status.copy()
+                
+                time.sleep(1)  # Kiểm tra mỗi giây
+                
+            except Exception as e:
+                print(f"Lỗi trong quá trình giám sát tín hiệu: {e}")
+                time.sleep(1)
+
+    def _cancel_related_missions(self, line_num, floor_suffix):
+        """Hủy các nhiệm vụ liên quan đến line và floor cụ thể"""
+        try:
+            with self.mission_lock:
+                missions_to_remove = []
+                
+                for i, mission in enumerate(self.mission_data["missions"]):
+                    mission_line = mission.get("line", "").replace(" ", "").lower()
+                    mission_floor = mission.get("floor", 0)
+                    
+                    # Xác định floor từ suffix
+                    if floor_suffix == "" or floor_suffix == "_1":
+                        target_floor = 1
+                    else:  # floor_suffix == "_2"
+                        target_floor = 2
+                    
+                    # Kiểm tra xem nhiệm vụ có liên quan không
+                    if (f"line{line_num}" in mission_line and mission_floor == target_floor):
+                        missions_to_remove.append(i)
+                        print(f"Hủy nhiệm vụ liên quan: Line {line_num}, Floor {target_floor}, Type {mission.get('machine_type')}")
+                
+                # Xóa các nhiệm vụ từ cuối lên để tránh lỗi index
+                for i in reversed(missions_to_remove):
+                    removed_mission = self.mission_data["missions"].pop(i)
+                    # Xóa khỏi lịch sử
+                    key = (
+                        removed_mission["floor"],
+                        tuple(removed_mission["line"]),
+                        removed_mission["machine_type"],
+                    )
+                    self.mission_history.discard(key)
+                    print(f"Đã hủy nhiệm vụ: {removed_mission}")
+                
+        except Exception as e:
+            print(f"Lỗi khi hủy nhiệm vụ: {e}")
 
     def start(self):
         """Khởi động server và lắng nghe kết nối"""
@@ -55,6 +149,9 @@ class SocketServer:
                         f"Không thể tìm thấy cổng khả dụng sau {max_retries} lần thử"
                     )
 
+        # Khởi động thread giám sát tín hiệu
+        self.start_signal_monitoring()
+
         while True:
             client_socket, address = self.server_socket.accept()
             self.clients.append(client_socket)
@@ -68,11 +165,19 @@ class SocketServer:
         for ip, info in self.receive_dict_value.items():
             line = info.get("line", "").replace(" ", "").lower()
             machine_type = info.get("machine_type", "").lower()
-            key = f"call_{machine_type}_{line}"
             floors = info.get("floor", [])
-            if any(f != 0 for f in floors):
-                if key in state.call_status:
-                    state.call_status[key] = 1
+            
+            # Xử lý từng floor
+            for floor_index, floor_value in enumerate(floors):
+                if floor_value != 0:  # Nếu có tín hiệu
+                    # Tạo key cho floor cụ thể
+                    if floor_index == 0:
+                        key = f"call_{machine_type}_{line}"
+                    else:
+                        key = f"call_{machine_type}_{line}_{floor_index}"
+                    
+                    if key in state.call_status:
+                        state.call_status[key] = 1
 
     def handle_client(self, client_socket: socket.socket, address: tuple):
         """Xử lý dữ liệu từ một client cụ thể"""
@@ -172,6 +277,10 @@ class SocketServer:
     def stop(self):
         """Dừng server và đóng các socket"""
         print("Đang dừng server")
+        
+        # Dừng thread giám sát tín hiệu
+        self.stop_monitoring_signals()
+        
         for client in self.clients:
             client.close()
         self.server_socket.close()
@@ -209,3 +318,24 @@ class SocketServer:
                         print(f"Lỗi khi gửi tin nhắn đến client: {e}")
                         continue
                 print(f"Đã gửi tin nhắn đến tất cả client: {message}")
+
+    def stop_monitoring_signals(self):
+        """Dừng thread giám sát tín hiệu"""
+        self.stop_monitoring = True
+        if self.monitoring_thread and self.monitoring_thread.is_alive():
+            self.monitoring_thread.join(timeout=2)
+        print("Đã dừng giám sát tín hiệu")
+
+    def get_signal_status(self):
+        """Lấy trạng thái tín hiệu hiện tại để debug"""
+        with self._lock:
+            return state.call_status.copy()
+
+    def print_signal_status(self):
+        """In trạng thái tín hiệu hiện tại"""
+        current_status = self.get_signal_status()
+        print("=== Trạng thái tín hiệu hiện tại ===")
+        for key, value in current_status.items():
+            if value == 1:  # Chỉ in các tín hiệu đang active
+                print(f"{key}: {value}")
+        print("===================================")
