@@ -14,7 +14,6 @@ call_status = {
     "call_unloader_line26": 0,
     "call_unloader_line27": 0,
     "call_unloader_line28": 0,
-    
     # Floor 1 (có suffix _1)
     "call_loader_line25_1": 0,
     "call_loader_line26_1": 0,
@@ -24,7 +23,6 @@ call_status = {
     "call_unloader_line26_1": 0,
     "call_unloader_line27_1": 0,
     "call_unloader_line28_1": 0,
-    
     # Floor 2 (có suffix _2)
     "call_loader_line25_2": 0,
     "call_loader_line26_2": 0,

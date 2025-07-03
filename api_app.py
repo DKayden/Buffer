@@ -86,21 +86,6 @@ async def mission_control(data: dict):
         return {"error": str(e)}
 
 
-@app.get("/magazine_status")
-async def get_magazine_status():
-    return {"magazine_status": state.magazine_status}
-
-
-@app.get("/call_status")
-async def get_call_status():
-    return state.call_status
-
-
-@app.get("/robot_status")
-async def get_robot_status():
-    return state.robot_status
-
-
 @app.get("/status")
 async def robot_status():
     result = process_handler.read_robot_status()
@@ -113,15 +98,11 @@ async def add_line_auto(data: dict):
     return {"message": state.line_auto_web}
 
 
-@app.post("/line_auto_web/remove")
-async def remove_line_auto(line: str):
-    process_handler.remove_line_auto(line)
-    return {"message": "Đã xóa dòng tự động."}
-
-
 @app.post("/mode")
 async def robot_mode(data: dict):
     state.mode = data["mode"]
+    if data["mode"] == "manual":
+        state.line_auto_web.clear()
     return {"message": "Đã thay đổi chế độ."}
 
 

@@ -69,13 +69,10 @@ class ProccessHandler:
         if flag.status_code == 200:
             data = flag.json()
             if str(data) == "True":
-                self.write_message_on_GUI(f"Robot đã tới vị trí {location}")
                 return True
             else:
-                self.write_message_on_GUI(f"Robot chưa tới vị trí {location}")
                 return False
         else:
-            self.write_message_on_GUI("Yêu cầu kiểm tra vị trí không thành công")
             return False
 
     def control_robot_conveyor(self, direction):
@@ -253,30 +250,6 @@ class ProccessHandler:
     def check_sensor_right_robot(self):
         return self.get_information_sensor_robot()[5] == 0
 
-    def control_led(self, color):
-        """
-        Hàm này điều khiển led của robot.
-        """
-        try:
-            response = requests.post(
-                f"{self.robot_url}/color",
-                json={
-                    "color": color,
-                },
-            )
-            if response.status_code != 200:
-                raise requests.exceptions.RequestException(
-                    f"Lỗi đường truyền khi điều khiển led của robot. Mã trạng thái: {response.status_code}"
-                )
-            # self.write_message_on_GUI(f"Led của robot đã chuyển thành {color}")
-        except requests.exceptions.RequestException as e:
-            self.write_message_on_GUI(
-                f"Lỗi trong quá trình điều khiển led của robot: {str(e)}"
-            )
-            raise requests.exceptions.RequestException(
-                "Thất bại khi điều khiển led của robot"
-            ) from e
-
     def get_data_status_robot(self):
         try:
             response = requests.get(f"{self.robot_url}/status")
@@ -287,10 +260,9 @@ class ProccessHandler:
             data = response.json()
             return data
         except requests.exceptions.RequestException as e:
-            self.write_message_on_GUI(f"Lỗi trong quá trình kiểm tra status: {str(e)}")
-            raise requests.exceptions.RequestException(
-                "Thất bại trong kiểm tra status của robot"
-            ) from e
+            self.get_data_status_robot()
+        except Exception as ex:
+            logging.error(f"Xảy ra lỗi khi lấy dữ kiệu robot {ex}")
 
     def control_navigate_action(self, type):
         try:
@@ -301,7 +273,6 @@ class ProccessHandler:
                 raise requests.exceptions.RequestException(
                     f"Lỗi đường truyền khi điều khiển action của robot. Mã trạng thái: {response.status_code}"
                 )
-            self.write_message_on_GUI("Action của robot đã được điều khiển thành công")
         except requests.exceptions.RequestException as e:
             self.write_message_on_GUI(
                 f"Lỗi trong quá trình điều khiển action của robot: {str(e)}"
@@ -435,10 +406,6 @@ class ProccessHandler:
                 self.write_message_on_GUI(
                     f"Đã gửi thông tin tới máy {target_ip.getpeername()[0]}"
                 )
-            # else:
-            #     raise ValueError(
-            #         f"Không tìm thấy máy để nhận magazine tại vị trí {target_ip}"
-            #     )
         except Exception as e:
             logging.error(
                 f"Lỗi trong quá trình gửi thông tin muốn nhận magazine: {str(e)}"
@@ -447,8 +414,6 @@ class ProccessHandler:
             # raise
 
     def add_line_auto(self, line):
-        # with state.line_auto_web_lock:
-        # if line not in state.line_auto_web_lock:
         state.line_auto_web = line
 
     def remove_line_auto(self, line):
@@ -457,51 +422,48 @@ class ProccessHandler:
                 state.line_auto_web.remove(line)
 
     def is_line_auto(self, line):
-        # with state.line_auto_web_lock:
         return line in state.line_auto_web
 
     def read_robot_status(self):
-        state.data_status.update(self.get_data_status_robot())
-        call_status = {
-            "Call_Load_L25": state.call_status["call_loader_line25"],
-            "Call_Load_L26": state.call_status["call_loader_line26"],
-            "Call_Load_L27": state.call_status["call_loader_line27"],
-            "Call_Load_L28": state.call_status["call_loader_line28"],
-            "Call_UnLoad_L25": state.call_status["call_unloader_line25"],
-            "Call_UnLoad_L26": state.call_status["call_unloader_line26"],
-            "Call_UnLoad_L27": state.call_status["call_unloader_line27"],
-            "Call_UnLoad_L28": state.call_status["call_unloader_line28"],
-        }
-        magazine_status = state.magazine_status
+        try:
+            call_status = {
+                "Call_Load_L25": state.call_status["call_loader_line25"],
+                "Call_Load_L26": state.call_status["call_loader_line26"],
+                "Call_Load_L27": state.call_status["call_loader_line27"],
+                "Call_Load_L28": state.call_status["call_loader_line28"],
+                "Call_UnLoad_L25": state.call_status["call_unloader_line25"],
+                "Call_UnLoad_L26": state.call_status["call_unloader_line26"],
+                "Call_UnLoad_L27": state.call_status["call_unloader_line27"],
+                "Call_UnLoad_L28": state.call_status["call_unloader_line28"],
+                "Call_Load_L25_1": state.call_status["call_loader_line25_1"],
+                "Call_UnLoad_L25_1": state.call_status["call_unloader_line25_1"],
+                "Call_Load_L25_2": state.call_status["call_loader_line25_2"],
+                "Call_UnLoad_L25_2": state.call_status["call_unloader_line25_2"],
+                "Call_Load_L26_1": state.call_status["call_loader_line26_1"],
+                "Call_UnLoad_L26_1": state.call_status["call_unloader_line26_1"],
+                "Call_Load_L26_2": state.call_status["call_loader_line26_2"],
+                "Call_UnLoad_L26_2": state.call_status["call_unloader_line26_2"],
+                "Call_Load_L27_1": state.call_status["call_loader_line27_1"],
+                "Call_UnLoad_L27_1": state.call_status["call_unloader_line27_1"],
+                "Call_Load_L27_2": state.call_status["call_loader_line27_2"],
+                "Call_UnLoad_L27_2": state.call_status["call_unloader_line27_2"],
+                "Call_Load_L28_1": state.call_status["call_loader_line28_1"],
+                "Call_UnLoad_L28_1": state.call_status["call_unloader_line28_1"],
+                "Call_Load_L28_2": state.call_status["call_loader_line28_2"],
+                "Call_UnLoad_L28_2": state.call_status["call_unloader_line28_2"],
+            }
+            magazine_status = state.magazine_status
 
-        data_sensor = [
-            self.get_information_sensor_robot()[5],
-            self.get_information_sensor_robot()[6],
-        ]
-
-        if state.data_status["blocked"] or state.data_status["emergency"]:
-            self.control_led("red")
-            robot_led = "red"
-        elif (
-            state.data_status["current_station"] == CHARGE_LOCATION
-            or state.data_status["battery_level"] < 0.2
-        ):
-            self.control_led("yellow")
-            robot_led = "yellow"
-        else:
-            self.control_led("green")
-            robot_led = "green"
-
-        state.data_status["led"] = robot_led
-        state.data_status["callStatus"] = call_status
-        state.data_status["magazine_status"] = magazine_status
-        state.data_status["message"] = state.messenge
-        state.data_status["history"] = state.history
-        state.data_status["mode"] = state.mode
-        state.data_status["idle"] = state.robot_status
-        state.data_status["sensors"] = data_sensor
-        state.data_status["misson"] = state.mission
-        return state.data_status
+            state.data_status["callStatus"] = call_status
+            state.data_status["magazine_status"] = magazine_status
+            state.data_status["message"] = state.messenge
+            state.data_status["history"] = state.history
+            state.data_status["mode"] = state.mode
+            state.data_status["idle"] = state.robot_status
+            return state.data_status
+        except Exception as e:
+            logging.info(f"Xảy ra lỗi trong quá trình lấy trạng thái robot {e}")
+            self.read_robot_status()
 
     def write_message_on_GUI(self, message=""):
         state.messenge = message
@@ -515,20 +477,17 @@ class ProccessHandler:
         }
 
     def handle_robot_charging(self):
-        if (
-            state.data_status
-            and state.data_status["battery_level"]
-            and state.data_status["battery_level"] < 0.2
-        ):
+        data = self.get_data_status_robot()
+        if data and data["battery_level"] and data["battery_level"] < 0.2:
             self.write_message_on_GUI(f"Pin yếu! Cần sạc pin.")
             self.control_robot_to_location(CHARGE_LOCATION)
             while not self.check_location_robot(CHARGE_LOCATION):
                 self.write_message_on_GUI(f"Robot chưa di chuyển đến vị trí sạc pin!")
                 time.sleep(3)
-            while state.data_status["battery_level"] < 0.9:
+            while data["battery_level"] < 0.8:
                 self.write_message_on_GUI(f"Robot chưa sạc tới 90%")
                 time.sleep(60)
-            self.control_robot_to_location("LM2007")
+            self.control_robot_to_location(STANDBY_LOCATION)
 
     def process_handle_tranfer_goods(self, location, line, machine_type, floor, type):
         """
