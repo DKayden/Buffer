@@ -7,6 +7,7 @@ from config import SOCKET_HOST, SOCKET_PORT, MAP_ADDRESS
 import state
 import logging
 import time
+import random
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -53,6 +54,18 @@ class SocketServer:
                 for floor_suffix in ["_1", "_2"]:
                     key = f"call_{machine_type}_{line}{floor_suffix}"
                     state.call_status[key] = 0
+
+    def random_sleep(self, min_seconds: float = 1.0, max_seconds: float = 10.0):
+        """
+        Thực hiện sleep ngẫu nhiên trong khoảng thời gian từ min_seconds đến max_seconds
+        
+        Args:
+            min_seconds (float): Thời gian tối thiểu (mặc định: 1.0 giây)
+            max_seconds (float): Thời gian tối đa (mặc định: 10.0 giây)
+        """
+        sleep_time = random.uniform(min_seconds, max_seconds)
+        logging.info(f"Sleep ngẫu nhiên: {sleep_time:.2f} giây")
+        time.sleep(sleep_time)
 
     def start_signal_monitoring(self):
         """Bắt đầu thread giám sát tín hiệu liên tục"""
@@ -207,6 +220,7 @@ class SocketServer:
 
             while True:
                 data = client_socket.recv(1024)
+                self.random_sleep()
                 if not data:
                     break
 
@@ -318,7 +332,7 @@ class SocketServer:
                 logging.info(f"Lỗi khi lấy thông tin client: {e}")
         return None
 
-    def broadcast_message(self, message: str, target_socket: socket.socket = None):
+    def broadcast_message(self, message: str, target_socket: socket.socket | None = None):
         """Gửi tin nhắn tới tất cả hoặc một client cụ thể"""
         encoded_message = message.encode("utf-8")
         with self._lock:
