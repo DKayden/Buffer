@@ -58,13 +58,12 @@ class SocketServer:
     def random_sleep(self, min_seconds: float = 1.0, max_seconds: float = 10.0):
         """
         Thực hiện sleep ngẫu nhiên trong khoảng thời gian từ min_seconds đến max_seconds
-        
+
         Args:
             min_seconds (float): Thời gian tối thiểu (mặc định: 1.0 giây)
             max_seconds (float): Thời gian tối đa (mặc định: 10.0 giây)
         """
         sleep_time = random.uniform(min_seconds, max_seconds)
-        logging.info(f"Sleep ngẫu nhiên: {sleep_time:.2f} giây")
         time.sleep(sleep_time)
 
     def start_signal_monitoring(self):
@@ -184,8 +183,6 @@ class SocketServer:
                     raise ConnectionError(
                         f"Không thể tìm thấy cổng khả dụng sau {max_retries} lần thử"
                     )
-
-        # self.start_signal_monitoring()
 
         while True:
             client_socket, address = self.server_socket.accept()
@@ -314,7 +311,6 @@ class SocketServer:
     def stop(self):
         """Dừng server và đóng các socket"""
         logging.info("Đang dừng server")
-        # self.stop_monitoring_signals()
         for client in self.clients:
             client.close()
         self.server_socket.close()
@@ -332,7 +328,9 @@ class SocketServer:
                 logging.info(f"Lỗi khi lấy thông tin client: {e}")
         return None
 
-    def broadcast_message(self, message: str, target_socket: socket.socket | None = None):
+    def broadcast_message(
+        self, message: str, target_socket: socket.socket | None = None
+    ):
         """Gửi tin nhắn tới tất cả hoặc một client cụ thể"""
         encoded_message = message.encode("utf-8")
         with self._lock:
