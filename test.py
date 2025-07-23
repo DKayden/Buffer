@@ -95,6 +95,25 @@ def handle_robot_movement(location, error_message=""):
         logging.error(f"Lỗi khi di chuyển robot tới {location}: {str(e)}")
         raise
 
+def can_start_conveyor(line, machine_type, floor):
+    suffix = "" if floor == 0 else f"_{floor}"
+    key = f"call_{machine_type}_line{line}{suffix}"
+    return state.call_status.get(key, 0) == 1
+
+def wait_for_conveyor_and_sensor_off(line, machine_type, floor, timeout=30):
+    suffix = "" if floor == 0 else f"_{floor}"
+    key = f"call_{machine_type}_line{line}{suffix}"
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if (
+            state.call_status.get(key, 1) == 0
+        ):
+            return True
+        if check_pause_cancel():
+            raise MissionCancelledError("Mission cancelled")
+        time.sleep(0.5)
+    raise TimeoutError(f"Tín hiệu call_status chưa về 0 sau {timeout} giây.")
+
 
 def handle_conveyor_operations(line, machine_type, floor, type):
     """
@@ -107,6 +126,10 @@ def handle_conveyor_operations(line, machine_type, floor, type):
         type: Loại thao tác
     """
     try:
+        if not can_start_conveyor(line, machine_type, floor):
+            process_handler.write_message_on_GUI("Không thể quay băng tải do tín hiệu chưa sẵn sàng.")
+            raise Exception("Tín hiệu call_status chưa sẵn sàng")
+
         height = LINE_CONFIG.get((line, machine_type, floor), {}).get("line_height")
         process_handler.control_folk_conveyor(height)
         wait_for_condition(
@@ -212,6 +235,7 @@ def handle_tranfer_magazine(location, line, machine_type, floor, type):
             "sensor_check"
         )
         handle_sensor_check(type, sensor_check)
+        wait_for_conveyor_and_sensor_off(line, machine_type, floor, timeout=30)
 
         process_handler.control_robot_conveyor("stop")
         wait_for_condition(
@@ -256,6 +280,19 @@ def handle_mission_creation():
             time.sleep(1)
         except Exception as e:
             logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
+
+def cancel_current_mission():
+    try:
+        socket_server.remove_first_mission()
+        state.mission.pop(0)
+        logging.info("Đã loại bỏ nhiệm vụ hiện tại khỏi danh sách.")
+        state.magazine_status = None
+        reset_status_robot()
+        if not state.mission:
+            robot_to_standby()
+            state.robot_status = True
+    except Exception as e:
+        logging.error(f"Lỗi trong quá trình hủy nhiệm vụ: {str(e)}")
 
 
 def monitor_data():
@@ -382,12 +419,7 @@ def monitor_data():
 
                 process_handler.write_history("SUCCESS", "lay", line, floor)
 
-                socket_server.remove_first_mission()
-                state.mission.pop(0)
-                logging.info(f"Mission remainning: {state.mission}")
-                if not state.mission:
-                    robot_to_standby()
-                    state.robot_status = True
+                cancel_current_mission()
 
             time.sleep(1)
         except MissionCancelledError:
@@ -399,22 +431,6 @@ def monitor_data():
                 f"Lỗi trong quá trình thực thi nhiệm vụ: {str(e)}"
             )
             process_handler.write_history("ERROR", "lay", line, floor)
-
-
-def handle_exception_mission(exception):
-    if isinstance(exception, MissionCancelledError):
-        logging.info("Nhiệm vụ đã được hủy trong handle_exception_mission.")
-        return
-    if state.mission:
-        try:
-            socket_server.remove_first_mission()
-            state.mission.pop(0)
-            state.robot_status = True
-            logging.info("Đã loại bỏ nhiệm vụ bị hủy.")
-        except Exception as pop_err:
-            logging.warning(f"Lỗi khi loại bỏ nhiệm vụ: {pop_err}")
-    reset_status_robot()
-    robot_to_standby()
 
 
 def robot_to_standby():
@@ -454,15 +470,7 @@ def check_pause_cancel():
 
         # Xóa nhiệm vụ hiện tại nếu còn
         if state.mission:
-            socket_server.remove_first_mission()
-            state.mission.pop(0)
-            logging.info(f"Mission after cancel: {state.mission}")
-            logging.info("Đã loại bỏ nhiệm vụ hiện tại khỏi danh sách.")
-
-        state.magazine_status = None
-        reset_status_robot()
-        if not state.mission:
-            robot_to_standby()
+            cancel_current_mission()
 
         return True
 
@@ -476,13 +484,7 @@ def check_pause_cancel():
             state.pause_event.clear()
 
             if state.mission:
-                socket_server.remove_first_mission()
-                state.mission.pop(0)
-                logging.info(f"Mission after cancel: {state.mission}")
-                logging.info("Đã loại bỏ nhiệm vụ hiện tại khỏi danh sách.")
-                reset_status_robot()
-                if not state.mission:
-                    robot_to_standby()
+                cancel_current_mission()
             return True
         return False
     return False
