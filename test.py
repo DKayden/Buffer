@@ -95,19 +95,20 @@ def handle_robot_movement(location, error_message=""):
         logging.error(f"Lỗi khi di chuyển robot tới {location}: {str(e)}")
         raise
 
+
 def can_start_conveyor(line, machine_type, floor):
     suffix = "" if floor == 0 else f"_{floor}"
-    key = f"call_{machine_type}_line{line}{suffix}"
+    line_check = line.replace(" ", "")
+    key = f"call_{machine_type}_{line_check}{suffix}"
     return state.call_status.get(key, 0) == 1
+
 
 def wait_for_conveyor_and_sensor_off(line, machine_type, floor, timeout=30):
     suffix = "" if floor == 0 else f"_{floor}"
-    key = f"call_{machine_type}_line{line}{suffix}"
+    key = f"call_{machine_type}_{line}{suffix}"
     start_time = time.time()
     while time.time() - start_time < timeout:
-        if (
-            state.call_status.get(key, 1) == 0
-        ):
+        if state.call_status.get(key, 1) == 0:
             return True
         if check_pause_cancel():
             raise MissionCancelledError("Mission cancelled")
@@ -126,9 +127,9 @@ def handle_conveyor_operations(line, machine_type, floor, type):
         type: Loại thao tác
     """
     try:
-        if not can_start_conveyor(line, machine_type, floor):
-            process_handler.write_message_on_GUI("Không thể quay băng tải do tín hiệu chưa sẵn sàng.")
-            raise Exception("Tín hiệu call_status chưa sẵn sàng")
+        # if not can_start_conveyor(line, machine_type, floor):
+        #     cancel_current_mission()
+        #     raise MissionCancelledError("Mission cancelled")
 
         height = LINE_CONFIG.get((line, machine_type, floor), {}).get("line_height")
         process_handler.control_folk_conveyor(height)
@@ -223,19 +224,21 @@ def handle_tranfer_magazine(location, line, machine_type, floor, type):
 
         target_ip = LINE_CONFIG.get((line, machine_type, floor), {}).get("address")
         target = socket_server.get_client_socket_by_ip(target_ip)
-        count = 3
-        while count >= 0:
-            if check_pause_cancel():
-                raise MissionCancelledError("Mission cancelled")
-            process_handler.send_message_to_call(target, line, machine_type, floor)
-            count = count - 1
-            time.sleep(0.5)
+        # count = 3
+        # while count >= 0:
+        process_handler.send_message_to_call(target, line, machine_type, floor)
+        process_handler.send_message_to_call(target, line, machine_type, floor)
+        process_handler.send_message_to_call(target, line, machine_type, floor)
+        if check_pause_cancel():
+            raise MissionCancelledError("Mission cancelled")
+            # count = count - 1
+            # time.sleep(0.5)
 
         sensor_check = LINE_CONFIG.get((line, machine_type, floor), {}).get(
             "sensor_check"
         )
         handle_sensor_check(type, sensor_check)
-        wait_for_conveyor_and_sensor_off(line, machine_type, floor, timeout=30)
+        # wait_for_conveyor_and_sensor_off(line, machine_type, floor, timeout=30)
 
         process_handler.control_robot_conveyor("stop")
         wait_for_condition(
@@ -280,6 +283,7 @@ def handle_mission_creation():
             time.sleep(1)
         except Exception as e:
             logging.error(f"Lỗi trong quá trình tạo nhiệm vụ: {str(e)}")
+
 
 def cancel_current_mission():
     try:

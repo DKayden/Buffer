@@ -7,14 +7,14 @@ TURN_ADDRESS = 5
 APP_HOST = "0.0.0.0"
 APP_PORT = 8000
 
-ROBOT_HOST = "192.168.1.104"
+ROBOT_HOST = "192.168.1.105"
 ROBOT_PORT = 8000
 
-MODBUS_HOST = "localhost"
+MODBUS_HOST = "192.168.1.100"
 MODBUS_PORT = 502
 MODBUS_TYPE = "rtu"
 
-BUFFER_HOST = "localhost"
+BUFFER_HOST = "192.168.1.100"
 BUFFER_PORT = 5000
 
 BUFFER_LOCATION = "LM200"
@@ -53,7 +53,7 @@ LINE_CONFIG = {
         "address": "192.168.1.27",
     },
     ("line 25", "loader", 2): {
-        "line_height": 770,
+        "line_height": 765,
         "buffer_action": "circular",
         "buffer_turn": "counterclockwise",
         "stopper_action": "cw",
@@ -62,7 +62,7 @@ LINE_CONFIG = {
         "address": "192.168.1.27",
     },
     ("line 25", "unloader", 1): {
-        "line_height": 5,
+        "line_height": 4,
         "buffer_action": "flip",
         "buffer_turn": "clockwise",
         "stopper_action": "ccw",
@@ -107,7 +107,7 @@ LINE_CONFIG = {
         "address": "192.168.1.30",
     },
     ("line 26", "unloader", 2): {
-        "line_height": 760,
+        "line_height": 765,
         "buffer_action": "circular",
         "buffer_turn": "clockwise",
         "stopper_action": "cw",
@@ -161,7 +161,7 @@ LINE_CONFIG = {
         "address": "192.168.1.33",
     },
     ("line 28", "loader", 2): {
-        "line_height": 750,
+        "line_height": 745,
         "buffer_action": "circular",
         "buffer_turn": "lockwise",
         "stopper_action": "cw",

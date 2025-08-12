@@ -184,6 +184,8 @@ class SocketServer:
                         f"Không thể tìm thấy cổng khả dụng sau {max_retries} lần thử"
                     )
 
+        # self.start_signal_monitoring()
+
         while True:
             client_socket, address = self.server_socket.accept()
             self.clients.append(client_socket)
@@ -217,7 +219,8 @@ class SocketServer:
 
             while True:
                 data = client_socket.recv(1024)
-                self.random_sleep()
+                time.sleep(10)
+                # self.random_sleep()
                 if not data:
                     break
 
@@ -311,6 +314,7 @@ class SocketServer:
     def stop(self):
         """Dừng server và đóng các socket"""
         logging.info("Đang dừng server")
+        # self.stop_monitoring_signals()
         for client in self.clients:
             client.close()
         self.server_socket.close()

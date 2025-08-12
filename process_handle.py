@@ -26,6 +26,7 @@ import json
 import time
 import state
 
+# buffer_db = BufferDatabase()
 
 # Khởi tạo socket server
 socket_server = SocketServer()
@@ -446,6 +447,7 @@ class ProccessHandler:
             state.data_status["history"] = state.history
             state.data_status["mode"] = state.mode
             state.data_status["idle"] = state.robot_status
+            state.data_status["line_auto_web"] = state.line_auto_web
             return state.data_status
         except Exception as e:
             logging.info(f"Xảy ra lỗi trong quá trình lấy trạng thái robot {e}")
