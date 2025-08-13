@@ -41,19 +41,17 @@ class SocketServer:
         self.stop_monitoring = False
 
     def _init_call_status(self):
-        lines = ["line25", "line26", "line27", "line28"]
-        machine_types = ["loader", "unloader"]
+        for ip, info in self.receive_dict_value.items():
+            line = info.get("line", "").replace(" ", "").lower()
+            machine_type = info.get("machine_type", "").lower()
+            floors = info.get("floor", [])
 
-        for line in lines:
-            for machine_type in machine_types:
-                # Key cho floor (không có suffix)
-                key = f"call_{machine_type}_{line}"
+            for floor_index, floor_value in enumerate(floors):
+                if floor_value == 0:
+                    key = f"call_{machine_type}_{line}"
+                else:
+                    key = f"call_{machine_type}_{line}_{floor_value}"
                 state.call_status[key] = 0
-
-                # Key cho floor 1 và 2 (có suffix)
-                for floor_suffix in ["_1", "_2"]:
-                    key = f"call_{machine_type}_{line}{floor_suffix}"
-                    state.call_status[key] = 0
 
     def random_sleep(self, min_seconds: float = 1.0, max_seconds: float = 10.0):
         """
@@ -202,12 +200,13 @@ class SocketServer:
             floors = info.get("floor", [])
 
             for floor_index, floor_value in enumerate(floors):
-                if floor_value != 0:
-                    if floor_index == 0:
-                        key = f"call_{machine_type}_{line}"
-                    else:
-                        key = f"call_{machine_type}_{line}_{floor_index}"
-
+                if floor_value == 0:
+                    key = f"call_{machine_type}_{line}"
+                    if any(f != 0 for f in floors):
+                        if key in state.call_status:
+                            state.call_status[key] = 1
+                else:
+                    key = f"call_{machine_type}_{line}_{floor_value}"
                     if key in state.call_status:
                         state.call_status[key] = 1
 
@@ -219,8 +218,6 @@ class SocketServer:
 
             while True:
                 data = client_socket.recv(1024)
-                time.sleep(10)
-                # self.random_sleep()
                 if not data:
                     break
 
